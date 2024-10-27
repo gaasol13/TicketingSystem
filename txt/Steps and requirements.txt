@@ -1,0 +1,271 @@
+Project Title: Comparative Analysis of Transactional Behavior, Schema Design, and Nested Data Structures Management in MySQL and MongoDB through a Ticketing System Implementation
+Introduction
+
+This project involves developing a backend for a ticketing system to simulate a high-demand environment with limited ticket availability. The goal is to compare how MySQL (a relational database) and MongoDB (a NoSQL database) handle transactional behavior, schema design, and the management of nested data structures. The implementation will focus on how each database manages concurrent transactions, schema rigidity versus flexibility, and the complexities involved in handling data structures.
+Project Objectives
+Primary Objective
+
+To critically analyze and compare the transactional behavior, schema design, and management of nested data structures in MySQL and MongoDB by implementing a ticketing system.
+Secondary Objectives
+
+    Examine MySQL's handling of transactional integrity and schema rigidity, particularly when two processes attempt to purchase the same ticket simultaneously.
+    Explore MongoDB's approach to transactional behavior and schema flexibility in the same scenario, analyzing how it manages concurrent transactions and intricate data structures.
+    Compare the development experiences and challenges encountered when implementing the ticketing system in both databases.
+
+Project Steps and Requirements
+Step 1: Environment Setup
+
+Establishing a robust development environment is crucial. The following tools and technologies are essential for the project:
+
+    Java Development Kit (JDK 8 or Higher)
+        Requirement: Needed to develop and run Java applications.
+        Installation:
+            Download from Oracle or use OpenJDK.
+            Install by following the instructions for your operating system.
+            Set the JAVA_HOME environment variable.
+            Verify installation using java -version and javac -version.
+
+    Eclipse Integrated Development Environment (IDE)
+        Requirement: An IDE for writing, debugging, and managing Java code efficiently.
+        Installation:
+            Download Eclipse IDE for Java Developers from the Eclipse website.
+            Install and configure the IDE.
+            Ensure Maven and Git plugins are included or install them separately.
+
+    Apache Maven
+        Requirement: A build automation and dependency management tool.
+        Installation:
+            Download from the Apache Maven website.
+            Unpack and set the MAVEN_HOME environment variable.
+            Add Maven's bin directory to the PATH.
+            Verify with mvn -v.
+
+    Git Version Control System
+        Requirement: For tracking changes in the codebase and facilitating collaboration.
+        Installation:
+            Download from the Git website.
+            Install and configure global username and email:
+
+            arduino
+
+        git config --global user.name "Your Name"
+        git config --global user.email "you@example.com"
+
+MySQL Server
+
+    Requirement: A relational database system to explore schema rigidity and transactional behavior.
+    Installation:
+        Download MySQL Community Server from the MySQL website.
+        Install using the installer and set a strong root password.
+        Start the MySQL service.
+
+MySQL Workbench
+
+    Requirement: A graphical tool for MySQL database design and administration.
+    Installation:
+        Download from the MySQL Workbench page.
+        Install and connect to your MySQL server.
+
+MongoDB Server
+
+    Requirement: A NoSQL database to examine schema flexibility and nested data structures.
+    Installation:
+        Download MongoDB Community Server from the MongoDB website.
+        Install and configure the data directory (e.g., C:\data\db on Windows).
+        Start the MongoDB service.
+
+MongoDB Compass
+
+    Requirement: A GUI for MongoDB to visualize and interact with data.
+    Installation:
+        Download from the MongoDB Compass page.
+        Install and connect to your MongoDB instance.
+
+JUnit Testing Framework
+
+    Requirement: For writing and running automated tests in Java.
+    Installation:
+        No separate installation; include JUnit as a dependency in your Maven project's pom.xml:
+
+        xml
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.13.2</version>
+                <scope>test</scope>
+            </dependency>
+
+    Mockaroo (Web Tool)
+        Requirement: For generating realistic mock data.
+        Access:
+            Visit Mockaroo (no installation required).
+
+Additional Recommendations:
+
+    Set Environment Variables: Ensure JAVA_HOME, MAVEN_HOME, and PATH are correctly set.
+    Install IDE Plugins: For enhanced functionality, install Maven, Git, and database plugins in Eclipse.
+    Ensure Compatibility: Use compatible versions of all software to avoid conflicts.
+
+Step 2: Set Up Databases
+
+2.1 MySQL Database Setup
+
+    Create Database and User:
+
+    sql
+
+    CREATE DATABASE TicketingSystem;
+    CREATE USER 'ticket_user'@'localhost' IDENTIFIED BY 'secure_password';
+    GRANT ALL PRIVILEGES ON TicketingSystem.* TO 'ticket_user'@'localhost';
+    FLUSH PRIVILEGES;
+
+    Design Schema:
+        Define tables such as Genre, Artist, Venue, Concert, TicketCategory, Ticket, Customer, CustomerOrder, and OrderTicket.
+        Establish relationships using foreign keys.
+        Use MySQL Workbench to create an ER diagram for visualization.
+
+2.2 MongoDB Database Setup
+
+    Create Database and User:
+
+    javascript
+
+    use TicketingSystem;
+    db.createUser({
+      user: "ticket_user",
+      pwd: "secure_password",
+      roles: [{ role: "readWrite", db: "TicketingSystem" }]
+    });
+
+    Design Collections:
+        Collections might include concerts, customers, orders.
+        Use embedded documents for related data (e.g., embedding tickets within concerts).
+
+Step 3: Data Generation with Mockaroo
+
+    Define Data Schemas:
+        Customers: customer_id, customer_name, email, username, password_hash.
+        Concerts/Tickets: concert_id, concert_name, date, tickets (array of ticket documents).
+        Orders: order_id, customer_id, tickets_purchased, order_date.
+    Generate Data:
+        Use Mockaroo to create datasets in CSV (for MySQL) and JSON (for MongoDB).
+    Import Data into Databases:
+        MySQL:
+            Use LOAD DATA INFILE or MySQL Workbench's import feature.
+        MongoDB:
+            Use mongoimport command-line tool:
+
+            bash
+
+            mongoimport --db TicketingSystem --collection concerts --file concerts.json --jsonArray --username ticket_user --password secure_password
+
+Step 4: MySQL Implementation
+
+4.1 Develop Java Backend
+
+    Set Up Maven Project in Eclipse:
+        Create a new Maven project.
+        Add dependencies for MySQL Connector/J and JUnit in pom.xml.
+    Implement Database Connection Class:
+        Use JDBC to connect to MySQL.
+        Manage connections with proper resource handling (try-with-resources).
+    Implement Transaction Management:
+        Use Connection.setAutoCommit(false) to control transactions.
+        Implement methods to handle ticket purchase transactions.
+    Simulate Concurrency:
+        Use multithreading to simulate simultaneous purchase attempts.
+        Ensure that transactions correctly handle isolation and locking to prevent overselling.
+    Write Unit Tests:
+        Use JUnit to write tests for transactional operations and concurrency scenarios.
+
+Step 5: MongoDB Implementation
+
+5.1 Develop Java Backend
+
+    Set Up Maven Project in Eclipse:
+        Create a new Maven project.
+        Add dependencies for MongoDB Java Driver and JUnit in pom.xml.
+    Implement Database Connection Class:
+        Connect to MongoDB using the MongoDB Java Driver.
+    Implement Transaction Management:
+        Use MongoDB sessions to handle transactions.
+        Implement methods to process ticket purchases within a transaction.
+    Simulate Concurrency:
+        Similar to the MySQL implementation, use multithreading.
+        Handle potential conflicts with appropriate transaction retries or error handling.
+    Write Unit Tests:
+        Use JUnit to test transactional behavior and concurrency handling.
+
+Step 6: Testing and Validation
+
+    Functional Testing:
+        Verify that customers can view concerts and purchase tickets.
+        Ensure ticket availability updates correctly after purchases.
+    Concurrency Testing:
+        Test scenarios where multiple threads attempt to purchase the same ticket.
+        Confirm that only one purchase succeeds and transactional integrity is maintained.
+    Documentation of Results:
+        Record the outcomes of tests.
+        Note any discrepancies or unexpected behaviors.
+
+Step 7: Documentation and Analysis
+
+7.1 Document Development Process
+
+    Challenges and Solutions:
+        Keep a log of issues encountered during implementation.
+        Document how challenges were addressed.
+    Observations:
+        Note differences in ease of development between MySQL and MongoDB.
+        Record insights on schema design, transaction handling, and data modeling.
+
+7.2 Comparative Analysis
+
+    Transactional Behavior:
+        Compare how each database handles transactions and concurrency.
+    Schema Design:
+        Contrast MySQL's rigid schema with MongoDB's flexible schema.
+    Nested Data Structures:
+        Evaluate the management of nested structures in both databases.
+    Development Experience:
+        Reflect on the complexities and efficiencies experienced during development.
+
+Step 8: Thesis Writing
+
+    Structure the Thesis Document:
+        Introduction: Outline the purpose, objectives, and research questions.
+        Literature Review: Discuss relational vs. NoSQL databases, transactional systems, and schema design.
+        Methodology: Detail the implementation steps, tools used, and experimental setup.
+        Implementation: Describe the development of both backends, including code snippets and diagrams.
+        Results: Present findings from testing and analysis.
+        Discussion: Interpret results, linking back to research questions.
+        Conclusion: Summarize insights and suggest areas for future research.
+    Include Diagrams and Models:
+        Use ER diagrams, class diagrams, sequence diagrams, and deployment diagrams to illustrate concepts.
+    References and Appendices:
+        Cite all sources used.
+        Include appendices for full code listings and additional data.
+
+Additional Requirements and Recommendations
+
+    Version Control with Git:
+        Initialize a Git repository for each backend implementation.
+        Commit changes frequently with clear messages.
+    Use of Database Management Tools:
+        Utilize MySQL Workbench and MongoDB Compass for database interactions.
+    Security Best Practices:
+        Store sensitive information like passwords securely (e.g., in configuration files not checked into version control).
+        Sanitize inputs to prevent SQL injection and other vulnerabilities.
+    Testing Frameworks:
+        Employ JUnit extensively for unit testing.
+        Consider integration and system testing to ensure all components work together.
+    Documentation Standards:
+        Comment code appropriately.
+        Maintain clear and consistent documentation throughout the project.
+    Presentation Preparation:
+        Prepare slides and materials summarizing the project for potential defense or presentations.
+
+Conclusion
+
+By following these detailed steps and meeting the specified requirements, the project will provide a comprehensive analysis of how MySQL and MongoDB handle transactional behavior, schema design, and nested data structures within the context of a ticketing system. This practical implementation and comparison will offer valuable insights and contribute meaningfully to your thesis.
