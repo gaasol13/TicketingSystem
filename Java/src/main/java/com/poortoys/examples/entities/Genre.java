@@ -1,4 +1,4 @@
-package com.poortoys.examples;
+package com.poortoys.examples.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

@@ -1,8 +1,6 @@
-package com.poortoys.examples;
+package com.poortoys.examples.entities;
 
 import javax.persistence.*;
-
-import com.poortoys.examples.Booking;
 
 /**
  * Represents the association between a Booking and a Ticket.

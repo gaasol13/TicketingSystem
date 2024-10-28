@@ -1,6 +1,7 @@
-package com.poortoys.examples;
+package com.poortoys.examples.entities;
 
 import javax.persistence.*;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;

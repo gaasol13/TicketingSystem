@@ -6,15 +6,15 @@ version="2.0">
 		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 		
 		 <!-- List all entity classes explicitly -->
-        <class>com.poortoys.examples.Booking</class>
-        <class>com.poortoys.examples.BookingTicket</class>
-        <class>com.poortoys.examples.User</class>
-        <class>com.poortoys.examples.Ticket</class>
-        <class>com.poortoys.examples.TicketCategory</class>
-        <class>com.poortoys.examples.Genre</class>
-        <class>com.poortoys.examples.Performer</class>
-        <class>com.poortoys.examples.Venue</class>
-        <class>com.poortoys.examples.Event</class>
+        <class>com.poortoys.examples.entities.Booking</class>
+        <class>com.poortoys.examples.entities.BookingTicket</class>
+        <class>com.poortoys.examples.entities.User</class>
+        <class>com.poortoys.examples.entities.Ticket</class>
+        <class>com.poortoys.examples.entities.TicketCategory</class>
+        <class>com.poortoys.examples.entities.Genre</class>
+        <class>com.poortoys.examples.entities.Performer</class>
+        <class>com.poortoys.examples.entities.Venue</class>
+        <class>com.poortoys.examples.entities.Event</class>
 			
 		<properties>
 			<!-- JDBC connection properties -->
@@ -33,6 +33,11 @@ version="2.0">
 			<property name="hibernate.show_sql" value="true"/>
 			<!-- Format SQL for better readability -->
 			<property name="hibernate.format_sql" value="true"/>
+			
+			 <!-- Enable batch processing for optimization -->
+            <property name="hibernate.jdbc.batch_size" value="50"/>
+            <property name="hibernate.order_inserts" value="true"/>
+            <property name="hibernate.order_updates" value="true"/>
 		</properties>
 		
 	</persistence-unit>
