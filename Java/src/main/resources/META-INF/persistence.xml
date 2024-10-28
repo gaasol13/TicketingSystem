@@ -2,17 +2,38 @@
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
 version="2.0">
-<persistence-unit name="com.ticketingsystem" transaction-type="RESOURCE_LOCAL">
-	<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-<properties>
-<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
-<property name="hibernate.show_sql" value="true"/>
-<property name="hibernate.format_sql" value="true"/>
-<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/ticketingsystem?serverTimezone=BST"/>
-<property name="javax.persistence.jdbc.user" value="root"/>
-<property name="javax.persistence.jdbc.password" value="gaboMH3mk1311!"/>
-<property name="hibernate.hbm2ddl.auto" value="update"/>
-</properties>
-</persistence-unit>
+	<persistence-unit name="ticketingsystem" transaction-type="RESOURCE_LOCAL">
+		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+		
+		 <!-- List all entity classes explicitly -->
+        <class>com.poortoys.examples.Booking</class>
+        <class>com.poortoys.examples.BookingTicket</class>
+        <class>com.poortoys.examples.User</class>
+        <class>com.poortoys.examples.Ticket</class>
+        <class>com.poortoys.examples.TicketCategory</class>
+        <class>com.poortoys.examples.Genre</class>
+        <class>com.poortoys.examples.Performer</class>
+        <class>com.poortoys.examples.Venue</class>
+        <class>com.poortoys.examples.Event</class>
+			
+		<properties>
+			<!-- JDBC connection properties -->
+			<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+			<!-- DB URL -->
+			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/ticketsystem?serverTimezone=UTC"/>
+			<!-- DB credentials -->
+			<property name="javax.persistence.jdbc.user" value="root"/>
+			<property name="javax.persistence.jdbc.password" value="gaboMH3mk1311!"/>
+			
+			<!-- Hibernate properties -->
+			<!-- Database schema "update" will create/update tables on entity classes -->
+			<property name="hibernate.hbm2ddl.auto" value="update"/>
+			<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+			<!-- Show SQL queries in console for debugging -->
+			<property name="hibernate.show_sql" value="true"/>
+			<!-- Format SQL for better readability -->
+			<property name="hibernate.format_sql" value="true"/>
+		</properties>
+		
+	</persistence-unit>
 </persistence>
