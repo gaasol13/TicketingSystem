@@ -5,3 +5,9 @@ public enum TicketStatus {
 	RESERVED,
 	SOLD
 }
+
+/*
+ * @Enumerated(EnumType.STRING)
+ * 
+ * @Column(nullable = false) private TicketStatus status;
+ */
