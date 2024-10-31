@@ -4,23 +4,29 @@ Purpose: Stores basic genre information for categorizing performances
 Relationships: Referenced by performers collection
 */
 {
-    "createCollection": "genres",
+    "collMod": "genres",
     "validator": {
       "$jsonSchema": {
         "bsonType": "object",
         "required": ["name"],
+        "additionalProperties": false,
         "properties": {
+          "_id": {},
           "name": {
             "bsonType": "string",
-            "description": "Genre name - required and must be unique"
-            // Examples: "Rock", "Classical", "Jazz"
+            "description": "Genre name is required and must be unique"
           }
         }
       }
     },
-    "validationLevel": "strict", // Enforces validation on all inserts and updates
-    "validationAction": "error"  // Rejects invalid documents
+    "validationLevel": "strict",
+    "validationAction": "error"
   }
+  /*
+      Fields:
+        _id: ObjectId (automatically generated)
+        name: String, required, unique*/
+
   
   /* 
   Collection: performers
@@ -30,32 +36,28 @@ Relationships: Referenced by performers collection
   - Referenced by events collection
   */
   {
-    "createCollection": "performers",
-    "validator": {
-      "$jsonSchema": {
-        "bsonType": "object",
-        "required": ["name", "genres"],
-        "properties": {
-          "name": {
-            "bsonType": "string",
-            "description": "Performer name - required"
-          },
-          "description": {
-            "bsonType": "string",
-            "description": "Performer description - optional"
-          },
-          "genres": {
-            "bsonType": "array",
-            "items": {
-              "bsonType": "objectId",
-              "description": "Reference to genre IDs - enables genre-based searching"
-            },
-            "minItems": 1  // Performer must have at least one genre
-          }
+  "collMod": "performers",
+  "validator": {
+    "$jsonSchema": {
+      "bsonType": "object",
+      "required": ["name", "genre_id"],
+      "additionalProperties": false,
+      "properties": {
+        "_id": {},
+        "name": {
+          "bsonType": "string",
+          "description": "Performer name is required and must be unique"
+        },
+        "genre_id": {
+          "bsonType": "objectId",
+          "description": "Genre ID is required and must reference the genres collection"
         }
       }
     }
-  }
+  },
+  "validationLevel": "strict",
+  "validationAction": "error"
+}
   
   /* 
   Collection: venues
@@ -66,48 +68,36 @@ Relationships: Referenced by performers collection
   - Tracks venue capacity for ticket allocation
   */
   {
-    "createCollection": "venues",
+    "collMod": "venues",
     "validator": {
       "$jsonSchema": {
         "bsonType": "object",
-        "required": ["name", "capacity"],
+        "required": ["name", "address", "type", "capacity"],
+        "additionalProperties": false,
         "properties": {
+          "_id": {},
           "name": {
             "bsonType": "string",
-            "description": "Venue name - required"
+            "description": "Venue name is required and must be unique"
           },
           "address": {
-            "bsonType": "object",
-            "required": ["street", "city", "state", "zipCode"],
-            "properties": {
-              "street": { "bsonType": "string" },
-              "city": { "bsonType": "string" },
-              "state": { "bsonType": "string" },
-              "zipCode": { "bsonType": "string" }
-            }
+            "bsonType": "string",
+            "description": "Address is required"
+          },
+          "type": {
+            "bsonType": "string",
+            "description": "Type of venue is required"
           },
           "capacity": {
             "bsonType": "int",
-            "minimum": 1,
-            "description": "Total venue capacity - must be positive"
-          },
-          "seatingLayout": {
-            "bsonType": "object",
-            "patternProperties": {
-              "^[A-Z0-9]+$": {  // Section identifiers must be alphanumeric
-                "bsonType": "object",
-                "required": ["section", "rows", "seatsPerRow"],
-                "properties": {
-                  "section": { "bsonType": "string" },
-                  "rows": { "bsonType": "int", "minimum": 1 },
-                  "seatsPerRow": { "bsonType": "int", "minimum": 1 }
-                }
-              }
-            }
+            "minimum": 0,
+            "description": "Capacity is required and must be a non-negative integer"
           }
         }
       }
-    }
+    },
+    "validationLevel": "strict",
+    "validationAction": "error"
   }
   
   /* 
@@ -122,39 +112,67 @@ Relationships: Referenced by performers collection
   - Temporal indexing for date-based queries
   */
   {
-    "createCollection": "events",
+    "collMod": "events",
     "validator": {
       "$jsonSchema": {
         "bsonType": "object",
-        "required": ["title", "performers", "venue", "datetime", "status"],
+        "required": ["name", "performer_id", "date", "venue_id", "ticket_categories"],
+        "additionalProperties": false,
         "properties": {
-          "title": {
+          "_id": {},
+          "name": {
             "bsonType": "string",
-            "description": "Event title - required"
+            "description": "Event name is required"
           },
-          "performers": {
-            "bsonType": "array",
-            "items": {
-              "bsonType": "objectId",
-              "description": "Array of performer IDs - supports multiple performers per event"
-            },
-            "minItems": 1  // Event must have at least one performer
-          },
-          "venue": {
+          "performer_id": {
             "bsonType": "objectId",
-            "description": "Reference to venue ID"
+            "description": "Performer ID is required and must reference the performers collection"
           },
-          "datetime": {
+          "date": {
             "bsonType": "date",
-            "description": "Event date and time - used for scheduling and queries"
+            "description": "Event date is required"
           },
-          "status": {
-            "enum": ["SCHEDULED", "ON_SALE", "SOLD_OUT", "CANCELLED"],
-            "description": "Event status - controls ticket availability"
+          "venue_id": {
+            "bsonType": "objectId",
+            "description": "Venue ID is required and must reference the venues collection"
+          },
+          "ticket_categories": {
+            "bsonType": "array",
+            "description": "Array of ticket categories",
+            "items": {
+              "bsonType": "object",
+              "required": ["description", "price", "start_date", "end_date", "area"],
+              "additionalProperties": false,
+              "properties": {
+                "description": {
+                  "bsonType": "string",
+                  "description": "Category description is required"
+                },
+                "price": {
+                  "bsonType": "decimal",
+                  "minimum": 0,
+                  "description": "Price is required and must be a non-negative decimal"
+                },
+                "start_date": {
+                  "bsonType": "date",
+                  "description": "Ticket availability start date is required"
+                },
+                "end_date": {
+                  "bsonType": "date",
+                  "description": "Ticket availability end date is required"
+                },
+                "area": {
+                  "bsonType": "string",
+                  "description": "Seating area description is required"
+                }
+              }
+            }
           }
         }
       }
-    }
+    },
+    "validationLevel": "strict",
+    "validationAction": "error"
   }
   
   /* 
@@ -211,26 +229,42 @@ Relationships: Referenced by performers collection
   - Email validation
   - Unique constraint on email
   */
-  {
-    "createCollection": "users",
-    "validator": {
-      "$jsonSchema": {
-        "bsonType": "object",
-        "required": ["email", "name"],
-        "properties": {
-          "email": {
-            "bsonType": "string",
-            "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
-            "description": "User email - required and must be valid format"
-          },
-          "name": {
-            "bsonType": "string",
-            "description": "User name - required"
-          }
+  
+  "collMod": "users",
+  "validator": {
+    "$jsonSchema": {
+      "bsonType": "object",
+      "required": ["username", "email", "password_hash", "confirmation_code", "registration_date"],
+      "additionalProperties": false,
+      "properties": {
+        "_id": {},
+        "username": {
+          "bsonType": "string",
+          "description": "Username is required and must be unique"
+        },
+        "email": {
+          "bsonType": "string",
+          "pattern": "^.+@.+\\..+$",
+          "description": "Email is required, must be unique, and must follow email format"
+        },
+        "password_hash": {
+          "bsonType": "string",
+          "description": "Password hash is required"
+        },
+        "confirmation_code": {
+          "bsonType": "string",
+          "description": "Confirmation code is required"
+        },
+        "registration_date": {
+          "bsonType": "date",
+          "description": "Registration date is required"
         }
       }
     }
-  }
+  },
+  "validationLevel": "strict",
+  "validationAction": "error"
+}
   
   /* 
   Collection: bookings
@@ -245,70 +279,70 @@ Relationships: Referenced by performers collection
   - Temporal tracking
   - Optimistic locking support
   */
-  {
-    "createCollection": "bookings",
-    "validator": {
-      "$jsonSchema": {
-        "bsonType": "object",
-        "required": ["user", "event", "status", "totalAmount", "tickets", "createdAt"],
-        "properties": {
-          "user": {
+  
+  "collMod": "bookings",
+  "validator": {
+    "$jsonSchema": {
+      "bsonType": "object",
+      "required": ["user_id", "delivery_email", "delivery_time", "time_paid", "time_sent", "total_price", "discount", "final_price", "status", "tickets"],
+      "additionalProperties": false,
+      "properties": {
+        "_id": {},
+        "user_id": {
+          "bsonType": "objectId",
+          "description": "User ID is required and must reference the users collection"
+        },
+        "delivery_email": {
+          "bsonType": "string",
+          "pattern": "^.+@.+\\..+$",
+          "description": "Delivery email is required and must follow email format"
+        },
+        "delivery_time": {
+          "bsonType": "date",
+          "description": "Delivery time is required"
+        },
+        "time_paid": {
+          "bsonType": "date",
+          "description": "Time paid is required"
+        },
+        "time_sent": {
+          "bsonType": "date",
+          "description": "Time sent is required"
+        },
+        "total_price": {
+          "bsonType": "decimal",
+          "minimum": 0,
+          "description": "Total price is required and must be a non-negative decimal"
+        },
+        "discount": {
+          "bsonType": "decimal",
+          "minimum": 0,
+          "description": "Discount is required and must be a non-negative decimal"
+        },
+        "final_price": {
+          "bsonType": "decimal",
+          "minimum": 0,
+          "description": "Final price is required and must be a non-negative decimal"
+        },
+        "status": {
+          "enum": ["confirmed", "in-progress", "canceled"],
+          "description": "Booking status is required and must be one of the specified values"
+        },
+        "tickets": {
+          "bsonType": "array",
+          "description": "Array of ticket references",
+          "items": {
             "bsonType": "objectId",
-            "description": "Reference to user ID"
+            "description": "Each ticket must reference the tickets collection"
           },
-          "event": {
-            "bsonType": "objectId",
-            "description": "Reference to event ID"
-          },
-          "status": {
-            "enum": ["PENDING", "CONFIRMED", "CANCELLED"],
-            "description": "Booking status - used for payment and fulfillment tracking"
-          },
-          "totalAmount": {
-            "bsonType": "decimal",
-            "minimum": 0,
-            "description": "Total booking amount - stored as decimal for precision"
-          },
-          "createdAt": {
-            "bsonType": "date",
-            "description": "Booking creation timestamp - used for timeout management"
-          },
-          "tickets": {
-            "bsonType": "array",
-            "items": {
-              "bsonType": "object",
-              "required": ["ticketCategory", "price", "status"],
-              "properties": {
-                "ticketCategory": {
-                  "bsonType": "objectId",
-                  "description": "Reference to ticket category ID"
-                },
-                "seat": {
-                  "bsonType": "object",
-                  "required": ["section", "row", "number"],
-                  "properties": {
-                    "section": { "bsonType": "string" },
-                    "row": { "bsonType": "string" },
-                    "number": { "bsonType": "string" }
-                  }
-                },
-                "price": {
-                  "bsonType": "decimal",
-                  "minimum": 0,
-                  "description": "Individual ticket price at time of booking"
-                },
-                "status": {
-                  "enum": ["RESERVED", "CONFIRMED", "CANCELLED"],
-                  "description": "Individual ticket status"
-                }
-              }
-            },
-            "minItems": 1  // Booking must include at least one ticket
-          }
+          "uniqueItems": true
         }
       }
     }
-  }
+  },
+  "validationLevel": "strict",
+  "validationAction": "error"
+}
   
   /* 
   Index Definitions
