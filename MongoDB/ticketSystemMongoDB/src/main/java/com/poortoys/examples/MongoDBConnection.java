@@ -3,30 +3,33 @@ package com.poortoys.examples;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 
 public class MongoDBConnection {
 
-    public static MongoClient mongoClient;
+    private static MongoClient mongoClient;
+    private static final String CONNECTION_STRING = "mongodb://localhost:27017/";
+    private static final String DATABASE_NAME = "admin";
+    private static final String COLLECTION_NAME = "ticketsystem";
 
     static {
         try {
-            // Connection string with URL-encoded password
-            String connectionString = "mongodb://localhost:27017/";
-
             // Create a MongoClient using the connection string
-            mongoClient = MongoClients.create(connectionString);
+            mongoClient = MongoClients.create(CONNECTION_STRING);
         } catch (Exception e) {
             System.err.println("An error occurred while connecting to MongoDB:");
             e.printStackTrace();
         }
     }
 
-    // Getter for the MongoClient instance
-    public static MongoClient getMongoClient() {
-        return mongoClient;
+    // Method to retrieve the MongoCollection directly
+    public static MongoCollection<Document> getCollection() {
+        MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);
+        return database.getCollection(COLLECTION_NAME);
     }
 
-    // Optionally, provide a method to close the connection
+    // Close the MongoDB client connection
     public static void close() {
         if (mongoClient != null) {
             mongoClient.close();
