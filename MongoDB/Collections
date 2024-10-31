@@ -1,0 +1,296 @@
+{
+    "createCollection": "genres",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "bsonType": "string",
+            "description": "Genre name - required and must be unique"
+          }
+        }
+      }
+    },
+    "validationLevel": "strict",
+    "validationAction": "error"
+  }
+  
+  {
+    "createCollection": "performers",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["name", "genres"],
+        "properties": {
+          "name": {
+            "bsonType": "string",
+            "description": "Performer name - required"
+          },
+          "description": {
+            "bsonType": "string",
+            "description": "Performer description"
+          },
+          "genres": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "objectId",
+              "description": "Reference to genre IDs"
+            },
+            "minItems": 1
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createCollection": "venues",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["name", "capacity"],
+        "properties": {
+          "name": {
+            "bsonType": "string",
+            "description": "Venue name - required"
+          },
+          "address": {
+            "bsonType": "object",
+            "required": ["street", "city", "state", "zipCode"],
+            "properties": {
+              "street": { "bsonType": "string" },
+              "city": { "bsonType": "string" },
+              "state": { "bsonType": "string" },
+              "zipCode": { "bsonType": "string" }
+            }
+          },
+          "capacity": {
+            "bsonType": "int",
+            "minimum": 1,
+            "description": "Venue capacity - must be positive"
+          },
+          "seatingLayout": {
+            "bsonType": "object",
+            "patternProperties": {
+              "^[A-Z0-9]+$": {
+                "bsonType": "object",
+                "required": ["section", "rows", "seatsPerRow"],
+                "properties": {
+                  "section": { "bsonType": "string" },
+                  "rows": { "bsonType": "int", "minimum": 1 },
+                  "seatsPerRow": { "bsonType": "int", "minimum": 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createCollection": "events",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["title", "performers", "venue", "datetime", "status"],
+        "properties": {
+          "title": {
+            "bsonType": "string",
+            "description": "Event title - required"
+          },
+          "performers": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "objectId",
+              "description": "Reference to performer IDs"
+            },
+            "minItems": 1
+          },
+          "venue": {
+            "bsonType": "objectId",
+            "description": "Reference to venue ID"
+          },
+          "datetime": {
+            "bsonType": "date",
+            "description": "Event date and time"
+          },
+          "status": {
+            "enum": ["SCHEDULED", "ON_SALE", "SOLD_OUT", "CANCELLED"],
+            "description": "Event status"
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createCollection": "ticketCategories",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["event", "name", "price", "quantity", "availableQuantity"],
+        "properties": {
+          "event": {
+            "bsonType": "objectId",
+            "description": "Reference to event ID"
+          },
+          "name": {
+            "bsonType": "string",
+            "description": "Category name"
+          },
+          "price": {
+            "bsonType": "decimal",
+            "minimum": 0,
+            "description": "Ticket price"
+          },
+          "quantity": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Total quantity of tickets"
+          },
+          "availableQuantity": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Currently available tickets"
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createCollection": "users",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["email", "name"],
+        "properties": {
+          "email": {
+            "bsonType": "string",
+            "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+            "description": "User email - required and must be valid format"
+          },
+          "name": {
+            "bsonType": "string",
+            "description": "User name - required"
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createCollection": "bookings",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user", "event", "status", "totalAmount", "tickets", "createdAt"],
+        "properties": {
+          "user": {
+            "bsonType": "objectId",
+            "description": "Reference to user ID"
+          },
+          "event": {
+            "bsonType": "objectId",
+            "description": "Reference to event ID"
+          },
+          "status": {
+            "enum": ["PENDING", "CONFIRMED", "CANCELLED"],
+            "description": "Booking status"
+          },
+          "totalAmount": {
+            "bsonType": "decimal",
+            "minimum": 0,
+            "description": "Total booking amount"
+          },
+          "createdAt": {
+            "bsonType": "date",
+            "description": "Booking creation timestamp"
+          },
+          "tickets": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "required": ["ticketCategory", "price", "status"],
+              "properties": {
+                "ticketCategory": {
+                  "bsonType": "objectId",
+                  "description": "Reference to ticket category ID"
+                },
+                "seat": {
+                  "bsonType": "object",
+                  "required": ["section", "row", "number"],
+                  "properties": {
+                    "section": { "bsonType": "string" },
+                    "row": { "bsonType": "string" },
+                    "number": { "bsonType": "string" }
+                  }
+                },
+                "price": {
+                  "bsonType": "decimal",
+                  "minimum": 0,
+                  "description": "Ticket price at time of booking"
+                },
+                "status": {
+                  "enum": ["RESERVED", "CONFIRMED", "CANCELLED"],
+                  "description": "Ticket status"
+                }
+              }
+            },
+            "minItems": 1
+          }
+        }
+      }
+    }
+  }
+  
+  {
+    "createIndexes": "genres",
+    "indexes": [
+      {
+        "key": { "name": 1 },
+        "name": "unique_genre_name",
+        "unique": true
+      }
+    ]
+  }
+  
+  {
+    "createIndexes": "events",
+    "indexes": [
+      {
+        "key": { "datetime": 1 },
+        "name": "event_datetime"
+      },
+      {
+        "key": { "status": 1 },
+        "name": "event_status"
+      }
+    ]
+  }
+  
+  {
+    "createIndexes": "ticketCategories",
+    "indexes": [
+      {
+        "key": { "event": 1, "availableQuantity": 1 },
+        "name": "ticket_availability"
+      }
+    ]
+  }
+  
+  {
+    "createIndexes": "bookings",
+    "indexes": [
+      {
+        "key": { "event": 1, "status": 1 },
+        "name": "booking_event_status"
+      },
+      {
+        "key": { "user": 1, "createdAt": -1 },
+        "name": "user_bookings"
+      }
+    ]
+  }
