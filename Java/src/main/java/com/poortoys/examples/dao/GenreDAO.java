@@ -30,20 +30,36 @@ public class GenreDAO {
 		List<Genre> results = query.getResultList();
 		return results.isEmpty() ? null : results.get(0);
 	}
-
+	
+	  public List<Genre> findAll() {
+	        TypedQuery<Genre> query = em.createQuery("SELECT g FROM Genre g", Genre.class);
+	        return query.getResultList();
+	    }
+	
+	
 	//Persists a new entity instance into the database
 	public void create(Genre genre) {
 		// TODO Auto-generated method stub
 		em.persist(genre);
-		
+			
 	}
+	
+	public Genre update(Genre genre) {
+		return em.merge(genre);
+	}
+	
+	public void delete(Genre genre) {
+		em.remove(em.contains(genre)? genre : em.merge(genre));
+	}
+	
+	
 	
 	/*
 	 * Counts the total number of Genres
 	 * @return Total count of genres
 	 */
-	public Integer count() {
-		TypedQuery<Integer> query = em.createQuery("SELECT COUNT(g) FROM Genre g", Integer.class);
+	public Long count() {
+		TypedQuery<Long> query = em.createQuery("SELECT COUNT(*) FROM Genre", Long.class);
 		return query.getSingleResult();
 	}
 
