@@ -41,7 +41,7 @@ public class User {
 
     // One user can have many bookings
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Booking> bookings;
+    private List<Booking> booking;
 
     // Default constructor required by JPA
     public User() {
