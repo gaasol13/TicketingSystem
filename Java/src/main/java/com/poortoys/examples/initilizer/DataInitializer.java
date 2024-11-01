@@ -30,18 +30,21 @@ public class DataInitializer {
 
     // DAO instances for each entity
     private GenreDAO genreDAO;
-    private PerformerDAO performerDAO;
-    private VenueDAO venueDAO;
-    private EventDAO eventDAO;
-    private TicketCategoryDAO ticketCategoryDAO;
-    private TicketDAO ticketDAO;
-    private UserDAO userDAO;
-    private BookingDAO bookingDAO;
-    private BookingTicketDAO bookingTicketDAO;
 
-    /**
-     * Constructor that initializes the EntityManagerFactory, EntityManager, and DAOs.
-     */
+	/*
+	 * private PerformerDAO performerDAO; private VenueDAO venueDAO; private
+	 * EventDAO eventDAO; private TicketCategoryDAO ticketCategoryDAO; private
+	 * TicketDAO ticketDAO; private UserDAO userDAO; private BookingDAO bookingDAO;
+	 * private BookingTicketDAO bookingTicketDAO;
+	 */
+    
+    //Initializer the instances
+    private List<Initializer> initializers;
+    
+    
+    
+    //Constructor that initializes the EntityManagerFactory, EntityManager, and DAOs.
+     
     public DataInitializer() {
         // Create an EntityManagerFactory based on the persistence unit
         emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
@@ -50,34 +53,39 @@ public class DataInitializer {
 
         // Initialize DAOs with the EntityManager
         genreDAO = new GenreDAO(em);
-        performerDAO = new PerformerDAO(em);
-        venueDAO = new VenueDAO(em);
-        eventDAO = new EventDAO(em);
-        ticketCategoryDAO = new TicketCategoryDAO(em);
-        ticketDAO = new TicketDAO(em);
-        userDAO = new UserDAO(em);
-        bookingDAO = new BookingDAO(em);
-        bookingTicketDAO = new BookingTicketDAO(em);
+		/*
+		 * performerDAO = new PerformerDAO(em); venueDAO = new VenueDAO(em); eventDAO =
+		 * new EventDAO(em); ticketCategoryDAO = new TicketCategoryDAO(em); ticketDAO =
+		 * new TicketDAO(em); userDAO = new UserDAO(em); bookingDAO = new
+		 * BookingDAO(em); bookingTicketDAO = new BookingTicketDAO(em);
+		 */
+        
+        // Initialize initializers
+      List<String> genreNames = Arrays.asList(
+    		  "Techno Duro", "Psy Trance");
+      
+      initializers = Arrays.asList(
+              new GenreInitializer(genreDAO, genreNames));
     }
     
+    
+    
     /*
-     * Populate the database with sample data within a transaction
-     * It calls methods to create and persiste each entity type
-     * This method ensure atomicity, if any insertuon fails, all changes are rolled back
-     * 
-     */
+     * populates the database with initial data by executing each initializer 
+     * within its own transaction.
+    */
     
     public void populateData() {
     	try {
-    		// Begin transaction
-    		em.getTransaction().begin();
     		
-    		// Create and persist Genres
-    		createGenres();
-    		
-    		//Commit transaction after 
-    		em.getTransaction().commit();
-            System.out.println("Transaction committed successfully.");
+    		for (Initializer initializer : initializers) {
+    			em.getTransaction().begin();
+    			initializer.initialize();
+    			em.getTransaction().commit();
+    		}
+            
+            validateData();
+            
     	} catch (Exception e) {
     		//Rollback transaction in case of any errors
     		if (em.getTransaction().isActive()) {
@@ -88,11 +96,10 @@ public class DataInitializer {
     		e.printStackTrace();
     	}
     }
+   
     
-    /*
-     * Closes the EntityManager and EntityManagerFactory to release resources
-     * 
-     */
+     // Closes the EntityManager and EntityManagerFactory to release resources
+     
     public void close() {
         if (em != null && em.isOpen()) {
             em.close();
@@ -105,38 +112,16 @@ public class DataInitializer {
     }
 
     
-    /*
-     * Create and persists Genre Entities
-     * It avoids duplication by checking if a genre already exists before inserting
-     */
-    private void createGenres() {
-    	System.out.println("Creating the genres, please wait :)");
-    	
-    	//List of genre names to insert
-    	List<String> genreNames = Arrays.asList(
-    			"Rock", "Jazz", "Dub", "Classical",
-    			"Techno", "Drum and Bass", "Hip-Hop",
-    			"Blues", "Reggae", "Electroswing"
-    			);
-    	
-    	//Iterate through the list of genres
-    	for(String name : genreNames) {
-    		//Check if the genre already exists
-    		Genre existingGenre = genreDAO.findByName(name);
-    		if (existingGenre == null) {
-    			//If not, create and persist the new Genre
-    			Genre genre = new Genre(name);
-    			genreDAO.create(genre);
-    			System.out.println("Genre added: " + name);
-    		} else {
-    			//If exists, skip to prevent duplication
-    			System.out.println("Genre already exists: " + name);
-    		}
-    	}
-    	
-    	System.out.println("Genres creation completed.\n");
     
+    //Validates the data insertion
+    private void validateData() {
+    	System.out.println("Validating...Chill out");
+    	System.out.println("Total Genres: " + genreDAO.count());
     }
+
+	
+    
+  
 
 
 }
