@@ -23,7 +23,7 @@ version="2.0">
 			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/ticketsystem?serverTimezone=UTC"/>
 			<!-- DB credentials -->
 			<property name="javax.persistence.jdbc.user" value="root"/>
-			<property name="javax.persistence.jdbc.password" value="gaboMH3mk1311!"/>
+			<property name="javax.persistence.jdbc.password" value="changeme"/>
 			
 			<!-- Hibernate properties -->
 			<!-- Database schema "update" will create/update tables on entity classes -->

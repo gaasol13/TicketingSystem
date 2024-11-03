@@ -76,6 +76,11 @@
       <artifactId>jbcrypt</artifactId>
       <version>0.4</version>
     </dependency>
+    <dependency>
+    	<groupId>com.version1.finalprojectdashboard</groupId>
+    	<artifactId>FinalProjectDashboard</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    </dependency>
 </dependencies>
 
 </project>

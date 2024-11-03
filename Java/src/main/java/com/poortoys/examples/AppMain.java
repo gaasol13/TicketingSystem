@@ -4,6 +4,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
+import com.poortoys.examples.dao.GenreDAO;
 import com.poortoys.examples.entities.Genre;
 import com.poortoys.examples.initilizer.DataInitializer;
 
@@ -16,9 +17,12 @@ public class AppMain {
 
     	
 		
+		
 		 DataInitializer initializer = new DataInitializer();
-		 initializer.populateData();
+		 initializer.populateData(); 
 		 initializer.close();
+		 
+    	
 		   
     	
         

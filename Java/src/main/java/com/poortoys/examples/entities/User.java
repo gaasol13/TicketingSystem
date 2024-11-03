@@ -43,6 +43,8 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> booking;
 
+	
+
     // Default constructor required by JPA
     public User() {
     }
@@ -106,11 +108,11 @@ public class User {
 
     // Getter and setter for bookings
     public List<Booking> getBookings() {
-        return bookings;
+        return booking;
     }
 
     public void setBookings(List<Booking> bookings) {
-        this.bookings = bookings;
+        this.booking = bookings;
     }
 
     // Optional: Override toString() for better readability
