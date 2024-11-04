@@ -29,14 +29,16 @@ public class DataInitializer {
 	private EntityManager em;
 
 	// DAO instances for each entity
-	private GenreDAO genreDAO;
+	//private GenreDAO genreDAO;
 	private PerformerDAO performerDAO;
-
+	private VenueDAO venueDAO;
+	//private UserDAO userDAO;
+	private EventDAO eventDAO;
 
 	/*
 	 * private PerformerDAO performerDAO; private VenueDAO venueDAO; private
 	 * EventDAO eventDAO; private TicketCategoryDAO ticketCategoryDAO; private
-	 * TicketDAO ticketDAO; private UserDAO userDAO; private BookingDAO bookingDAO;
+	 * TicketDAO ticketDAO; ; private BookingDAO bookingDAO;
 	 * private BookingTicketDAO bookingTicketDAO;
 	 */
 	//Initializer the instances
@@ -55,21 +57,31 @@ public class DataInitializer {
 		em = emf.createEntityManager();
 
 		// Initialize DAOs with the EntityManager
-		genreDAO = new GenreDAO(em);
+		//genreDAO = new GenreDAO(em);
 		performerDAO = new PerformerDAO(em);
-		/*
-		 * performerDAO = new PerformerDAO(em); venueDAO = new VenueDAO(em); eventDAO =
-		 * new EventDAO(em); ticketCategoryDAO = new TicketCategoryDAO(em); ticketDAO =
-		 * new TicketDAO(em); userDAO = new UserDAO(em); bookingDAO = new
-		 * BookingDAO(em); bookingTicketDAO = new BookingTicketDAO(em);
-		 */
+		venueDAO = new VenueDAO(em);
+		 //userDAO = new UserDAO(em);
+		eventDAO = new EventDAO(em);
+		
+		
+		
 		// Initialize initializers
         initializers = new ArrayList<>();
 		// Initialize initializers
-		List<String> genreNames = new ArrayList<>();
-		initializers.add(new GenreInitializer(genreDAO, genreNames));
+		//List<String> genreNames = new ArrayList<>();
+		
+		//initializers.add(new GenreInitializer(genreDAO, genreNames));
+		
 
-		initializers.add(new PerformerInitializer(performerDAO, genreDAO));
+		//initializers.add(new PerformerInitializer(performerDAO, genreDAO));
+		
+		// Add venue initializer
+        //initializers.add(new VenueInitializer(venueDAO));
+        
+     // Add user initializer
+      //  initializers.add(new UserInitializer(userDAO));
+        
+        initializers.add(new EventInitializer(eventDAO, performerDAO, venueDAO));
 	}
 
 
@@ -105,9 +117,13 @@ public class DataInitializer {
 
 	//Validates the data insertion
 	private void validateData() {
-		System.out.println("Validating...Chill out");
-		System.out.println("Total Genres: " + genreDAO.count());
-		System.out.println("Total Performers: " + performerDAO.count());
+		//System.out.println("Validating...Chill out");
+		//System.out.println("Total Genres: " + genreDAO.count());
+		//System.out.println("Total Performers: " + performerDAO.count());
+		 //System.out.println("Total Venues: " + venueDAO.count());
+		 //System.out.println("Total Users: " + userDAO.count());
+		 
+		 System.out.println("Total Events: " + eventDAO.count());
 	}
 
 	// Closes the EntityManager and EntityManagerFactory to release resources
