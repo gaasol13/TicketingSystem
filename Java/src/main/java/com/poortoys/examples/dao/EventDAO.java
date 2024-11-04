@@ -25,12 +25,17 @@ public class EventDAO {
      */
     public Event findByNameAndDate(String name, Date eventDate) {
         TypedQuery<Event> query = em.createQuery(
-            "SELECT e FROM Event e WHERE e.eventName = :name AND e.eventDate = :date", Event.class);
+            "SELECT e FROM Event e WHERE e.eventName = :name AND FUNCTION('DATE', e.eventDate) = FUNCTION('DATE', :date)", Event.class);
         query.setParameter("name", name);
         query.setParameter("date", eventDate);
         List<Event> results = query.getResultList();
         return results.isEmpty() ? null : results.get(0);
     }
+
+    public Event findById(int id) {
+        return em.find(Event.class, id);
+    }
+
 
     /**
      * Retrieves all Events from the database.
