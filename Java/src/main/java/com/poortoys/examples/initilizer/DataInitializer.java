@@ -36,18 +36,12 @@ public class DataInitializer {
 	private EventDAO eventDAO;
 	private TicketCategoryDAO ticketCategoryDAO;
 	private TicketDAO ticketDAO;
-	/*
-	 * private PerformerDAO performerDAO; private VenueDAO venueDAO; private
-	 * EventDAO eventDAO; private TicketCategoryDAO ticketCategoryDAO; private
-	 * TicketDAO ticketDAO; ; private BookingDAO bookingDAO;
-	 * private BookingTicketDAO bookingTicketDAO;
-	 */
+	private BookingDAO bookingDAO;
+	private BookingTicketDAO bookingTicketDAO;
+
+
 	//Initializer the instances
 	private List<Initializer> initializers;
-
-
-
-
 
 	//Constructor that initializes the EntityManagerFactory, EntityManager, and DAOs.
 
@@ -61,32 +55,37 @@ public class DataInitializer {
 		genreDAO = new GenreDAO(em);
 		performerDAO = new PerformerDAO(em);
 		venueDAO = new VenueDAO(em);
-		 userDAO = new UserDAO(em);
+		userDAO = new UserDAO(em);
 		eventDAO = new EventDAO(em);
 		ticketCategoryDAO = new TicketCategoryDAO(em);
-		 ticketDAO = new TicketDAO(em);
-		
-		
-		
+		ticketDAO = new TicketDAO(em);
+		bookingDAO = new BookingDAO(em);		
+		bookingTicketDAO = new BookingTicketDAO(em);
+
 		// Initialize initializers
-        initializers = new ArrayList<>();
+		initializers = new ArrayList<>();
 		// Initialize initializers
 		List<String> genreNames = new ArrayList<>();
-		
+
 		initializers.add(new GenreInitializer(genreDAO, genreNames));
-		
+
 
 		initializers.add(new PerformerInitializer(performerDAO, genreDAO));
-		
+
 		// Add venue initializer
-        initializers.add(new VenueInitializer(venueDAO));
-        
-     // Add user initializer
-        initializers.add(new UserInitializer(userDAO));
-        
-        initializers.add(new EventInitializer(eventDAO, performerDAO, venueDAO));
-        initializers.add(new TicketCategoryInitializer(ticketCategoryDAO, eventDAO));
-        initializers.add(new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO));
+		initializers.add(new VenueInitializer(venueDAO));
+
+		// Add user initializer
+		initializers.add(new UserInitializer(userDAO));
+
+		initializers.add(new EventInitializer(eventDAO, performerDAO, venueDAO));
+		initializers.add(new TicketCategoryInitializer(ticketCategoryDAO, eventDAO));
+		initializers.add(new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO));
+		initializers.add(new BookingInitializer(bookingDAO, userDAO));
+	
+		initializers.add(new BookingTicketInitializer(bookingTicketDAO, bookingDAO, userDAO, ticketDAO));
+
+
 	}
 
 
@@ -125,12 +124,14 @@ public class DataInitializer {
 		System.out.println("Validating...Chill out");
 		System.out.println("Total Genres: " + genreDAO.count());
 		System.out.println("Total Performers: " + performerDAO.count());
-		 System.out.println("Total Venues: " + venueDAO.count());
-		 System.out.println("Total Users: " + userDAO.count());
-		 
+		System.out.println("Total Venues: " + venueDAO.count());
+		System.out.println("Total Users: " + userDAO.count());
+
 		System.out.println("Total Events: " + eventDAO.count());
 		System.out.println("Total Ticket Categories: " + ticketCategoryDAO.count());
-		System.out.println("Total Ticket Categories: " + ticketDAO.count());
+		System.out.println("Total Tickets available: " + ticketDAO.count());
+		System.out.println("Total Bookings done: " + bookingDAO.count());
+		System.out.println("Total Booking Tickets: " + bookingTicketDAO.count());
 
 	}
 

@@ -58,7 +58,7 @@ public class Booking {
     private BigDecimal finalPrice;
 
     // Status of the booking, defaults to IN_PROGRESS
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = BookingStatusConverter.class)
     @Column(name = "booking_status", nullable = false, length = 15)
     private BookingStatus bookingStatus = BookingStatus.IN_PROGRESS;
 
@@ -71,14 +71,19 @@ public class Booking {
     }
 
     // Constructor for convenience
-    public Booking(User user, String deliveryAddressEmail, BigDecimal totalPrice, BigDecimal discount, BigDecimal finalPrice) {
-        this.user = user;
-        this.deliveryAddressEmail = deliveryAddressEmail;
-        this.totalPrice = totalPrice;
-        this.discount = discount;
-        this.finalPrice = finalPrice;
-        this.bookingStatus = BookingStatus.IN_PROGRESS;
-    }
+    public Booking(User user, String deliveryAddressEmail, Date deliveryTime, Date timePaid, Date timeSent, 
+            BigDecimal totalPrice, BigDecimal discount, BigDecimal finalPrice, BookingStatus bookingStatus) {
+ this.user = user;
+ this.deliveryAddressEmail = deliveryAddressEmail;
+ this.deliveryTime = deliveryTime;
+ this.timePaid = timePaid;
+ this.timeSent = timeSent;
+ this.totalPrice = totalPrice;
+ this.discount = discount;
+ this.finalPrice = finalPrice;
+ this.bookingStatus = bookingStatus;
+}
+
 
     // Getter for bookingId (no setter since it's auto-generated)
     public int getBookingId() {

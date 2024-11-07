@@ -2,6 +2,7 @@ package com.poortoys.examples.dao;
 
 import com.poortoys.examples.entities.Ticket;
 import com.poortoys.examples.entities.TicketStatus;
+import com.poortoys.examples.entities.User;
 
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
@@ -27,6 +28,19 @@ public class TicketDAO {
         TypedQuery<Ticket> query = em.createQuery("SELECT t FROM Ticket t WHERE t.event.eventId = :eventId AND t.status = :status", Ticket.class);
         query.setParameter("eventId", eventId);
         query.setParameter("status", TicketStatus.AVAILABLE);
+        return query.getResultList();
+    }
+    
+    public Ticket findBySerialNumber(String serialNumber) {
+        TypedQuery<Ticket> query = em.createQuery(
+            "SELECT t FROM Ticket t WHERE t.serialNumber = :serialNumber", Ticket.class);
+        query.setParameter("serialNumber", serialNumber);
+        return query.getResultList().stream().findFirst().orElse(null);
+    }
+
+    
+    public List<Ticket> findAll() {
+        TypedQuery<Ticket> query = em.createQuery("SELECT u FROM Ticket u", Ticket.class);
         return query.getResultList();
     }
 

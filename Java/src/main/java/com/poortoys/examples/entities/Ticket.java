@@ -44,7 +44,8 @@ public class Ticket {
 	private String seatNumber;
 	
 	//Status of the ticket to track availability, defaults to "AVAILABLE"
-	@Enumerated(EnumType.STRING)
+	//@Enumerated(EnumType.STRING)
+	@Convert(converter = TicketStatusConverter.class)
 	@Column(name = "status", nullable = false, length = 10)
 	private TicketStatus status = TicketStatus.AVAILABLE;
 	

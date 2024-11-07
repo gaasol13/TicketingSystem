@@ -35,6 +35,15 @@ public class UserDAO {
         TypedQuery<User> query = em.createQuery("SELECT u FROM User u", User.class);
         return query.getResultList();
     }
+    
+    public User findByUsername(String username) {
+        TypedQuery<User> query = em.createQuery(
+            "SELECT u FROM User u WHERE u.userName = :username", User.class);
+        query.setParameter("username", username);
+        List<User> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
+    }
+
 
     /**
      * Persists a new User into the database.

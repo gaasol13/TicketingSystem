@@ -1,5 +1,6 @@
 package com.poortoys.examples.dao;
 
+import com.poortoys.examples.entities.Event;
 import com.poortoys.examples.entities.TicketCategory;
 
 import javax.persistence.EntityManager;
@@ -16,7 +17,7 @@ public class TicketCategoryDAO {
 
     /**
      * Finds all TicketCategories associated with a particular event.
-     * @param eventId ID of the event.
+     * @param event ID of the event.
      * @return List of TicketCategory objects.
      */
     public List<TicketCategory> findByEventId(Integer eventId) {
