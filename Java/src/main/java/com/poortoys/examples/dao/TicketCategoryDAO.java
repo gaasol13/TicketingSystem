@@ -17,8 +17,6 @@ public class TicketCategoryDAO {
 
     /**
      * Finds all TicketCategories associated with a particular event.
-     * @param event ID of the event.
-     * @return List of TicketCategory objects.
      */
     public List<TicketCategory> findByEventId(Integer eventId) {
         TypedQuery<TicketCategory> query = em.createQuery(
@@ -28,8 +26,7 @@ public class TicketCategoryDAO {
     }
 
     /**
-     * Retrieves all TicketCategories from the database.
-     * @return A list of all TicketCategory objects.
+     * rtrieves all TicketCategories from the database.
      */
     public List<TicketCategory> findAll() {
         TypedQuery<TicketCategory> query = em.createQuery("SELECT tc FROM TicketCategory tc", TicketCategory.class);
@@ -37,8 +34,7 @@ public class TicketCategoryDAO {
     }
 
     /**
-     * Persists a new TicketCategory into the database.
-     * @param ticketCategory The TicketCategory object to be saved.
+     * persists a new TicketCategory into the database.
      */
     public void create(TicketCategory ticketCategory) {
         em.persist(ticketCategory);
@@ -46,8 +42,6 @@ public class TicketCategoryDAO {
 
     /**
      * Updates an existing TicketCategory in the database.
-     * @param ticketCategory The TicketCategory object with updated information.
-     * @return The updated TicketCategory object.
      */
     public TicketCategory update(TicketCategory ticketCategory) {
         return em.merge(ticketCategory);
@@ -55,7 +49,6 @@ public class TicketCategoryDAO {
 
     /**
      * Deletes a TicketCategory from the database.
-     * @param ticketCategory The TicketCategory object to delete.
      */
     public void delete(TicketCategory ticketCategory) {
         em.remove(em.contains(ticketCategory) ? ticketCategory : em.merge(ticketCategory));
@@ -63,7 +56,6 @@ public class TicketCategoryDAO {
 
     /**
      * Counts the total number of TicketCategories.
-     * @return Total count of ticket categories.
      */
     public Long count() {
         TypedQuery<Long> query = em.createQuery("SELECT COUNT(tc) FROM TicketCategory tc", Long.class);

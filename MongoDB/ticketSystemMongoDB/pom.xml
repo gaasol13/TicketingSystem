@@ -1,107 +1,122 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  
   <groupId>com.ticketingsystemMongoDB</groupId>
   <artifactId>ticketSystemMongoDB</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>8</maven.compiler.source>
-    <maven.compiler.target>8</maven.compiler.target>
+    <maven-compiler-plugin.source>8</maven-compiler-plugin.source>
+    <maven-compiler-plugin.target>8</maven-compiler-plugin.target>
+    <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+    <mongodb-driver-sync.version>4.5.1</mongodb-driver-sync.version>
+    <morphia-core.version>2.2.6</morphia-core.version>
   </properties>
-  
+
   <dependencies>
-  <!-- https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-sync -->
-<dependency>
-    <groupId>org.mongodb</groupId>
-    <artifactId>mongodb-driver-sync</artifactId>
-    <version>5.2.0</version>
-</dependency>
-<!-- https://mvnrepository.com/artifact/dev.morphia.morphia/morphia -->
-<dependency>
-    <groupId>dev.morphia.morphia</groupId>
-    <artifactId>morphia-core</artifactId>
-    <version>2.4.14</version>
-</dependency>
-
-<!--Like JUnit for testing-->
-<!-- https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter -->
-<dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-junit-jupiter</artifactId>
-    <version>5.14.2</version>
-    <scope>test</scope>
-</dependency>
-
-<!-- JUnit for Testing -->
+    <!-- MongoDB Driver Sync -->
     <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13.2</version>
-        <scope>test</scope>
-    </dependency>
-
-    <!-- Log4j for Logging -->
-    <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>2.17.2</version>
-    </dependency>
-
-    <!-- jBCrypt for Password Hashing -->
-    <dependency>
-        <groupId>org.mindrot</groupId>
-        <artifactId>jbcrypt</artifactId>
-        <version>0.4</version>
+      <groupId>org.mongodb</groupId>
+      <artifactId>mongodb-driver-sync</artifactId>
+      <version>4.5.1</version>
     </dependency>
     
-    <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <version>1.18.34</version>
-    <scope>provided</scope>
-</dependency>
+    <!-- Mockito for Testing -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>5.14.2</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <!-- JUnit for Testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <!-- SLF4J API -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.7</version>
+    </dependency>
+    
+    <!-- Logback Classic for SLF4J Binding -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.4.11</version>
+    </dependency>
+    
+    <!-- jBCrypt for Password Hashing -->
+    <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.4</version>
+    </dependency>
+    
+    
 
-<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
-<dependency>
-    <groupId>ch.qos.logback</groupId>
-    <artifactId>logback-classic</artifactId>
-    <version>1.5.12</version>
-    <scope>test</scope>
-</dependency>
+    <dependency>
+        <groupId>dev.morphia.morphia</groupId>
+        <artifactId>morphia-core</artifactId>
+        <version>2.2.6</version>
+    </dependency>
 
 
-<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
-<dependency>
-    <groupId>com.fasterxml.jackson.core</groupId>
-    <artifactId>jackson-databind</artifactId>
-    <version>2.18.0</version>
-</dependency>
 
-
+    
+    <!-- Lombok for Boilerplate Code Reduction -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.34</version>
+      <scope>provided</scope>
+    </dependency>
+    
+    <!-- Jackson Databind for JSON Processing -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.18.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.ticketingsystem</groupId>
+    	<artifactId>TicketingSystem</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    </dependency>
   </dependencies>
   
   <build>
     <plugins>
-      <plugin><!-- Use latest to build recent Java applications -->
+      <!-- Maven Compiler Plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.11.0</version>
+        <configuration>
+          <source>11</source>
+          <target>11</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>
   
-
-<repositories>
+  <repositories>
     <repository>
-        <id>sonatype-snapshots</id>
-        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        <snapshots>
-            <enabled>true</enabled>
-        </snapshots>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
     </repository>
-</repositories>
-
-
+  </repositories>
   
 </project>

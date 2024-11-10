@@ -26,38 +26,30 @@ public class Booking {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // Email address for ticket delivery, optional, maximum length of 100 characters
     @Column(name = "delivery_address_email", length = 100)
     private String deliveryAddressEmail;
 
-    // Timestamp when tickets are delivered, optional
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "delivery_time")
     private Date deliveryTime;
 
-    // Timestamp when payment was made, optional
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "time_paid")
     private Date timePaid;
 
-    // Timestamp when tickets were sent, optional
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "time_sent")
     private Date timeSent;
 
-    // Total price before discounts, cannot be null, minimum value of 0.00
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
-    // Discount applied to the booking, defaults to 0.00, cannot be negative
     @Column(name = "discount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 
-    // Final price after discounts, cannot be null, minimum value of 0.00
     @Column(name = "final_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal finalPrice;
 
-    // Status of the booking, defaults to IN_PROGRESS
     @Convert(converter = BookingStatusConverter.class)
     @Column(name = "booking_status", nullable = false, length = 15)
     private BookingStatus bookingStatus = BookingStatus.IN_PROGRESS;
@@ -70,7 +62,6 @@ public class Booking {
     public Booking() {
     }
 
-    // Constructor for convenience
     public Booking(User user, String deliveryAddressEmail, Date deliveryTime, Date timePaid, Date timeSent, 
             BigDecimal totalPrice, BigDecimal discount, BigDecimal finalPrice, BookingStatus bookingStatus) {
  this.user = user;
@@ -84,8 +75,6 @@ public class Booking {
  this.bookingStatus = bookingStatus;
 }
 
-
-    // Getter for bookingId (no setter since it's auto-generated)
     public int getBookingId() {
         return bookingId;
     }
@@ -180,7 +169,6 @@ public class Booking {
         this.bookingTickets = bookingTickets;
     }
 
-    // Optional: Override toString() for better readability
     @Override
     public String toString() {
         return "Booking{" +

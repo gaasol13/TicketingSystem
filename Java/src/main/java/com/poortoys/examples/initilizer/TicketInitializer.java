@@ -53,17 +53,17 @@ public class TicketInitializer implements Initializer {
                 // Initialize seatNumber to reset for each new category
                 int seatNumber = 1; // Resetting seatNumber for each category
 
-                // Create tickets for each row and seat up to a maximum limit to avoid infinite generation
+                //create tickets for each row and seat up to a maximum limit to avoid infinite generation
                 int maxRows = 5;   // Maximum rows per category, can be adjusted
                 int maxSeats = 10; // Maximum seats per row, can be adjusted
 
                 for (int row = 1; row <= maxRows; row++) {
                     for (int seat = 1; seat <= maxSeats; seat++) {
 
-                        // Generate a unique serial number for each ticket
+                        //Generate a unique serial number for each ticket
                         String serialNumber = generateSerialNumber(event, category, seatNumber++);
 
-                        // Check if the ticket with this serial number already exists
+                        //check if the ticket with this serial number already exists
                         if (ticketDAO.findBySerialNumber(serialNumber) == null) {
                             // If not, create and save a new Ticket object
                             Ticket ticket = new Ticket(

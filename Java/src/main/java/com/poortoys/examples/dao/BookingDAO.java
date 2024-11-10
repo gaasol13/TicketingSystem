@@ -16,7 +16,7 @@ public class BookingDAO {
         this.em = em;
     }
 
-    // Creates a new booking in the database
+    //creates a new booking in the database
     public void create(Booking booking) {
         em.persist(booking);
     }
