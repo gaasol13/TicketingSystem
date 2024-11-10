@@ -21,7 +21,6 @@ public class GenreDAO {
     * @return Genre object if found, else null.
     */
 	public Genre findByName(String name) {
-		// TODO Auto-generated method stub
 		//Query Creation
 		TypedQuery<Genre> query = em.createQuery("SELECT g FROM Genre g WHERE g.genreName = :name",
 				Genre.class);//parameter Genre name
