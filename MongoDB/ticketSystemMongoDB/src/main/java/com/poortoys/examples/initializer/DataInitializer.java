@@ -17,6 +17,7 @@ import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.GenreDAO;
 import com.poortoys.examples.dao.PerformerDAO;
 import com.poortoys.examples.dao.TicketCategoryDAO;
+import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.dao.VenueDAO;
 import com.ticketing.system.entities.Genre;
 import dev.morphia.Datastore;
@@ -37,6 +38,7 @@ public class DataInitializer {
     private final VenueDAO venueDAO;
     private final EventDAO eventDAO;
     private final TicketCategoryDAO ticketCategoryDAO;
+    private final UserDAO userDAO;
     
     // List of initializer instances
     private final List<Initializer> initializers;
@@ -65,6 +67,7 @@ public class DataInitializer {
         venueDAO = new VenueDAO(datastore);
         eventDAO = new EventDAO(datastore);
         ticketCategoryDAO = new TicketCategoryDAO(datastore);
+        userDAO = new UserDAO(datastore);
         
         // Initialize the list of initializers (only GenreInitializer)
         initializers = Arrays.asList(
@@ -72,7 +75,8 @@ public class DataInitializer {
             new PerformerInitializer(performerDAO, genreDAO),
         	new VenueInitializer(venueDAO),
         	new EventInitializer(eventDAO, performerDAO, venueDAO),
-        	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO)
+        	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO),
+        	new UserInitializer(userDAO)
         );
     }
     
@@ -101,6 +105,7 @@ public class DataInitializer {
         System.out.println("Total venues: " + venueDAO.count());
         System.out.println("Total events: " + eventDAO.count());
         System.out.println("Total categories: " + ticketCategoryDAO.count());
+        System.out.println("Total users: " + userDAO.count());
     }
     
     /**
