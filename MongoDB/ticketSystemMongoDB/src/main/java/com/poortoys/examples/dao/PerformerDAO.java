@@ -5,6 +5,7 @@ import java.util.List;
 import com.ticketing.system.entities.Performer;
 
 import dev.morphia.Datastore;
+import dev.morphia.query.experimental.filters.Filters;
 
 public class PerformerDAO {
 	
@@ -34,6 +35,14 @@ public class PerformerDAO {
 				.first();
 	}
 	
+	
+    public List<Performer> findByNames(List<String> names) {
+        return datastore.find(Performer.class)
+                .filter(Filters.in("performerName", names))
+                .iterator()
+                .toList();
+    }
+    
 	//Create a new genre
 	public void create(Performer performer) {
 		datastore.save(performer);

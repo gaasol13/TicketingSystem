@@ -12,7 +12,12 @@ import com.mongodb.client.MongoCollection;
 
 
 import org.bson.Document;
+
+import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.GenreDAO;
+import com.poortoys.examples.dao.PerformerDAO;
+import com.poortoys.examples.dao.TicketCategoryDAO;
+import com.poortoys.examples.dao.VenueDAO;
 import com.ticketing.system.entities.Genre;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
@@ -28,6 +33,10 @@ public class DataInitializer {
     
     // DAO instance for Genre entity
     private final GenreDAO genreDAO;
+    private final PerformerDAO performerDAO;
+    private final VenueDAO venueDAO;
+    private final EventDAO eventDAO;
+    private final TicketCategoryDAO ticketCategoryDAO;
     
     // List of initializer instances
     private final List<Initializer> initializers;
@@ -52,10 +61,18 @@ public class DataInitializer {
         
         // Initialize GenreDAO with the Datastore
         genreDAO = new GenreDAO(datastore);
+        performerDAO = new PerformerDAO(datastore);
+        venueDAO = new VenueDAO(datastore);
+        eventDAO = new EventDAO(datastore);
+        ticketCategoryDAO = new TicketCategoryDAO(datastore);
         
         // Initialize the list of initializers (only GenreInitializer)
         initializers = Arrays.asList(
-            new GenreInitializer(genreDAO, getGenreNames())
+            new GenreInitializer(genreDAO, getGenreNames()),
+            new PerformerInitializer(performerDAO, genreDAO),
+        	new VenueInitializer(venueDAO),
+        	new EventInitializer(eventDAO, performerDAO, venueDAO),
+        	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO)
         );
     }
     
@@ -80,6 +97,10 @@ public class DataInitializer {
     private void validateData() {
         System.out.println("Validating data insertion...");
         System.out.println("Total Genres: " + genreDAO.count());
+        System.out.println("Total performers: " + performerDAO.count());
+        System.out.println("Total venues: " + venueDAO.count());
+        System.out.println("Total events: " + eventDAO.count());
+        System.out.println("Total categories: " + ticketCategoryDAO.count());
     }
     
     /**
@@ -117,5 +138,21 @@ public class DataInitializer {
      */
     public GenreDAO getGenreDAO() {
         return genreDAO;
+    }
+    
+    public PerformerDAO getPerformerDAO() {
+        return performerDAO;
+    }
+    
+    public VenueDAO getVenueDAO() {
+        return venueDAO;
+    }
+    
+    public EventDAO getEventDAO() {
+        return eventDAO;
+    }
+    
+    public TicketCategoryDAO getTicketCategoryDAO() {
+    	return ticketCategoryDAO;
     }
 }
