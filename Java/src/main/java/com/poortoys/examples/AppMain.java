@@ -5,7 +5,6 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
 import com.poortoys.examples.dao.GenreDAO;
-import com.poortoys.examples.entities.Genre;
 import com.poortoys.examples.initilizer.DataInitializer;
 
 //import com.example.entities.Genre;

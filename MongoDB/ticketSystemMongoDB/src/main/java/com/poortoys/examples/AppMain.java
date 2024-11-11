@@ -13,10 +13,13 @@ public class AppMain {
     	DataInitializer dataInitializer = new DataInitializer();
     	
     	//Populate data into mongo
-    	dataInitializer.populateData();
+    	try{
+    		dataInitializer.populateData();
+    	} finally {
     	
     	//close the datastore
     	dataInitializer.close();
+    	}
     	
 		
 		/*

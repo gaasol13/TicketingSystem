@@ -22,6 +22,7 @@ public class Genre {
 	@Property("genreName") // Maps this field to the "genreNAme field in mongoDB
     private String genreName; // Name of the genre (e.g., Rock, Jazz)
 
+	
     // Default constructor
     public Genre() {
     }
