@@ -66,8 +66,7 @@ public class TicketInitializer implements Initializer{
                                     "Row " + row,
                                     "Seat " + seat,
                                     "available",
-                                    null,
-                                    category.getPrice() // Purchase date
+                                    null
                             );
                             ticketDAO.create(ticket);
                             System.out.println("Added ticket: " + serialNumber);

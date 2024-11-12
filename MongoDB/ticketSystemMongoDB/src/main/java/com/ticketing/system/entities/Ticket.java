@@ -56,16 +56,13 @@ public class Ticket {
 	@Property("purchase_date")
 	private Date purchaseDate;
 	
-	// Price of the ticket
-    @Property("price")
-    private BigDecimal price;
 
 	// Default constructor
 	public Ticket() {}
 
 	// Constructor with parameters
 	public Ticket(String serialNumber, ObjectId eventId, String ticketCategory, String section,
-			String rowNumber, String seatNumber, String status, Date purchaseDate,BigDecimal price) {
+			String rowNumber, String seatNumber, String status, Date purchaseDate) {
 		this.serialNumber = serialNumber;
 		this.eventId = eventId;
 		this.ticketCategory = ticketCategory;
@@ -74,7 +71,6 @@ public class Ticket {
 		this.seatNumber = seatNumber;
 		this.status = status;
 		this.purchaseDate = purchaseDate;
-		this.price = price;
 	}
 
 	// Getters and setters
@@ -146,15 +142,7 @@ public class Ticket {
 	public void setPurchaseDate(Date purchaseDate) {
 		this.purchaseDate = purchaseDate;
 	}
-	
-	// Getter and setter for price
-    public BigDecimal getPrice() {
-        return price;
-    }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
     
 
 	// Optional: Override toString() for better readability
@@ -169,8 +157,7 @@ public class Ticket {
 				", rowNumber='" + rowNumber + '\'' +
 				", seatNumber='" + seatNumber + '\'' +
 				", status='" + status + '\'' +
-				", purchaseDate=" + purchaseDate +
-				", price=" + price +
+				", purchaseDate=" + purchaseDate + 
 				'}';
 	}
 }

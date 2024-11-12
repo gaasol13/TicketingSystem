@@ -37,7 +37,8 @@ public class Event {
 	@Reference(lazy = true)
 	private Venue venue; //References the venue document
 	
-	//@Embedded//("ticketCategories") //embeds a list of TicketCategory documents within the Event document
+	//("ticketCategories") //embeds a list of TicketCategory documents within the Event document
+	@Reference("ticketCategories")
 	private Set<TicketCategory> ticketCategories; //list of ticket categories for the event
 	
     public Event() {

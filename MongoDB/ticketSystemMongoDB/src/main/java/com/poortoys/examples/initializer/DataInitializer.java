@@ -115,6 +115,7 @@ public class DataInitializer {
         System.out.println("Total categories: " + ticketCategoryDAO.count());
         System.out.println("Total users: " + userDAO.count());
         System.out.println("Total tickets: " + ticketDAO.count());
+        
     }
     
     /**
