@@ -17,8 +17,6 @@ public class EventDAO {
 
     /**
      * Constructor injecting the Morphia Datastore.
-     *
-     * @param datastore Morphia Datastore instance.
      */
     public EventDAO(Datastore datastore) {
         this.datastore = datastore;

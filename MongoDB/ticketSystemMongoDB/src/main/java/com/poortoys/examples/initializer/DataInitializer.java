@@ -13,10 +13,12 @@ import com.mongodb.client.MongoCollection;
 
 import org.bson.Document;
 
+import com.poortoys.examples.dao.BookingDAO;
 import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.GenreDAO;
 import com.poortoys.examples.dao.PerformerDAO;
 import com.poortoys.examples.dao.TicketCategoryDAO;
+import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.dao.VenueDAO;
 import com.ticketing.system.entities.Genre;
@@ -39,6 +41,8 @@ public class DataInitializer {
     private final EventDAO eventDAO;
     private final TicketCategoryDAO ticketCategoryDAO;
     private final UserDAO userDAO;
+    private final TicketDAO ticketDAO;
+    private final BookingDAO bookingDAO;
     
     // List of initializer instances
     private final List<Initializer> initializers;
@@ -68,6 +72,8 @@ public class DataInitializer {
         eventDAO = new EventDAO(datastore);
         ticketCategoryDAO = new TicketCategoryDAO(datastore);
         userDAO = new UserDAO(datastore);
+        ticketDAO = new TicketDAO(datastore);
+        bookingDAO = new BookingDAO(datastore);
         
         // Initialize the list of initializers (only GenreInitializer)
         initializers = Arrays.asList(
@@ -76,7 +82,9 @@ public class DataInitializer {
         	new VenueInitializer(venueDAO),
         	new EventInitializer(eventDAO, performerDAO, venueDAO),
         	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO),
-        	new UserInitializer(userDAO)
+        	new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO),
+        	new UserInitializer(userDAO),
+        	new BookingInitializer(bookingDAO, userDAO, ticketDAO, eventDAO)
         );
     }
     
@@ -106,6 +114,7 @@ public class DataInitializer {
         System.out.println("Total events: " + eventDAO.count());
         System.out.println("Total categories: " + ticketCategoryDAO.count());
         System.out.println("Total users: " + userDAO.count());
+        System.out.println("Total tickets: " + ticketDAO.count());
     }
     
     /**
@@ -159,5 +168,9 @@ public class DataInitializer {
     
     public TicketCategoryDAO getTicketCategoryDAO() {
     	return ticketCategoryDAO;
+    }
+    
+    public TicketDAO getTicketDAO() {
+    	return ticketDAO;
     }
 }
