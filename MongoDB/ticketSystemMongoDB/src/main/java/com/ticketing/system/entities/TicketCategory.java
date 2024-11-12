@@ -10,7 +10,7 @@ import dev.morphia.annotations.Entity;
 import dev.morphia.annotations.Id;
 import dev.morphia.annotations.Property;
 
-@Entity(value = "ticketCategories") // Marks as embedded without separate collection
+@Entity("ticketCategories") // Marks as embedded without separate collection
 public class TicketCategory {
 	//@Id
 	//private Object id;
