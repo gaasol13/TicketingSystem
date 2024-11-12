@@ -26,7 +26,7 @@ public class UserDAO {
 	//find the user by username
 	public User findByUserName(String userName) {
 		return datastore.find(User.class)
-				.filter(dev.morphia.query.experimental.filters.Filters.eq("userName", userName))
+				.filter(dev.morphia.query.experimental.filters.Filters.eq("user_name", userName))
 				.first();
 	}
 	
