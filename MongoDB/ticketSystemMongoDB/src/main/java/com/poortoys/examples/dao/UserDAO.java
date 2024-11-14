@@ -2,6 +2,10 @@ package com.poortoys.examples.dao;
 
 import java.util.List;
 
+import org.bson.types.ObjectId;
+import dev.morphia.query.experimental.filters.Filters;
+
+import com.ticketing.system.entities.Ticket;
 import com.ticketing.system.entities.User;
 
 import dev.morphia.Datastore;
@@ -62,5 +66,14 @@ public class UserDAO {
 	public void update(User user) {
 		datastore.save(user);
 	}
+
+
+    public User findById(ObjectId id) {
+        return datastore.find(User.class)
+            .filter(Filters.eq("_id", id))
+            .first();
+    }
+    
+
 
 }

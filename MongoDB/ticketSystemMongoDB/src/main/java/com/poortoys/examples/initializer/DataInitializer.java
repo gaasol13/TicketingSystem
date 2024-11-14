@@ -155,6 +155,10 @@ public class DataInitializer {
         return genreDAO;
     }
     
+    public UserDAO getUserDAO() {
+        return userDAO;
+    }
+    
     public PerformerDAO getPerformerDAO() {
         return performerDAO;
     }
@@ -173,5 +177,9 @@ public class DataInitializer {
     
     public TicketDAO getTicketDAO() {
     	return ticketDAO;
+    }
+    
+    public BookingDAO getBookingDAO() {
+    	return bookingDAO;
     }
 }
