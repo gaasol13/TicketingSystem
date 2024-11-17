@@ -19,9 +19,6 @@ public class EventDAO {
 
     /**
      * Finds an Event by its name and date.
-     * @param name Name of the event.
-     * @param eventDate Date of the event.
-     * @return Event object if found, else null.
      */
     public Event findByNameAndDate(String name, Date eventDate) {
         TypedQuery<Event> query = em.createQuery(

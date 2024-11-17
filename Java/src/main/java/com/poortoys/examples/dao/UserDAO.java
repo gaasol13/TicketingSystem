@@ -1,5 +1,6 @@
 package com.poortoys.examples.dao;
 
+import com.poortoys.examples.entities.Event;
 import com.poortoys.examples.entities.User;
 
 import javax.persistence.EntityManager;
@@ -26,10 +27,13 @@ public class UserDAO {
         List<User> results = query.getResultList();
         return results.isEmpty() ? null : results.get(0);
     }
+    
+    public User findById(int id) {
+        return em.find(User.class, id);
+    }
 
     /**
      * Retrieves all Users from the database.
-     * @return A list of all User objects.
      */
     public List<User> findAll() {
         TypedQuery<User> query = em.createQuery("SELECT u FROM User u", User.class);
