@@ -1,9 +1,92 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0" version="24.8.6">
   <diagram name="Page-1" id="NrrL4rjDDItCV1YCYkYC">
-    <mxGraphModel>
+    <mxGraphModel dx="1480" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-1" value="Client" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="150" height="748" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-2" value="Primary Node" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="278" y="20" width="150" height="748" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-3" value="Secondary Nodes" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="516" y="20" width="150" height="748" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-4" value="" style="shape=umlFrame;dashed=1;pointerEvents=0;dropTarget=0;strokeColor=#B3B3B3;height=20;width=0;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="318" y="149" width="308" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-5" value="" style="text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="K4nSIvvMZCW-oxzD4gkf-4">
+          <mxGeometry width="308" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-6" value="" style="shape=umlFrame;dashed=1;pointerEvents=0;dropTarget=0;strokeColor=#B3B3B3;height=20;width=0;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="318" y="335" width="308" height="284" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-7" value="" style="text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="K4nSIvvMZCW-oxzD4gkf-6">
+          <mxGeometry width="308" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-8" value="1. Initiate Transaction" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-1" target="K4nSIvvMZCW-oxzD4gkf-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="233" y="129" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-9" value="Propagate transaction" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-2" target="K4nSIvvMZCW-oxzD4gkf-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="481" y="251" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-10" value="Ready acknowledgment" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-3" target="K4nSIvvMZCW-oxzD4gkf-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="484" y="305" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-11" value="Prepare to commit" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-2" target="K4nSIvvMZCW-oxzD4gkf-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="481" y="437" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-12" value="Prepare-OK" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-3" target="K4nSIvvMZCW-oxzD4gkf-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="484" y="491" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-13" value="Commit transaction" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-2" target="K4nSIvvMZCW-oxzD4gkf-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="481" y="545" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-14" value="Commit complete" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-3" target="K4nSIvvMZCW-oxzD4gkf-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="484" y="599" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-15" value="4. Return acknowledgment" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" edge="1" parent="1" source="K4nSIvvMZCW-oxzD4gkf-2" target="K4nSIvvMZCW-oxzD4gkf-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="236" y="663" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-16" value="2. Coordination Phase" style="fillColor=#ffff88;strokeColor=#9E916F;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="328" y="169" width="288" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="K4nSIvvMZCW-oxzD4gkf-17" value="3. Two-Phase Commit" style="fillColor=#ffff88;strokeColor=#9E916F;hachureGap=4;fontFamily=Times New Roman;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="328" y="355" width="288" height="48" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
