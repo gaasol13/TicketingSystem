@@ -31,7 +31,8 @@ public class BookingService {
     private AtomicInteger successfulBookings = new AtomicInteger(0);
     private AtomicInteger failedBookings = new AtomicInteger(0);
 
-    public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO, UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
+    public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO, 
+    		UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
         this.bookingDAO = bookingDAO;
         this.ticketDAO = ticketDAO;
         this.userDAO = userDAO;
@@ -40,15 +41,17 @@ public class BookingService {
     }
 
     public boolean bookTickets(ObjectId userId, ObjectId eventId, int quantity) {
-        System.out.println("User " + userId + " attempting to book " + quantity + " tickets for event " + eventId);
+        System.out.println("User " + userId + " attempting to book " 
+        				+ quantity + " tickets for event " + eventId);
         
         // Start a session for transaction
         try (ClientSession session = datastore.startSession()) { // Corrected method
             session.startTransaction();
 
             try {
-                // Fetch the event to get ticket categories and pricing
+                //Fetch the event to get ticket categories and pricing
                 Event event = eventDAO.findById(eventId);
+                
                 if (event == null) {
                     System.out.println("Event not found: " + eventId);
                     failedBookings.incrementAndGet();
@@ -59,6 +62,7 @@ public class BookingService {
                 // Calculate total available tickets
                 long availableTickets = ticketDAO.countAvailableTickets(eventId);
                 System.out.println("Available tickets: " + availableTickets);
+
                 if (availableTickets < quantity) {
                     System.out.println("Not enough tickets available for event: " + eventId);
                     failedBookings.incrementAndGet();
@@ -121,10 +125,6 @@ public class BookingService {
 
     /**
      * Calculates the total price for the booked tickets based on their categories.
-     *
-     * @param event         The event for which tickets are booked.
-     * @param bookedTickets The list of tickets that have been booked.
-     * @return The total price as BigDecimal.
      */
     private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
         BigDecimal total = BigDecimal.ZERO;
@@ -138,10 +138,6 @@ public class BookingService {
 
     /**
      * Retrieves the price for a given ticket category.
-     *
-     * @param event          The event containing ticket categories.
-     * @param ticketCategory The category of the ticket.
-     * @return The price as BigDecimal.
      */
     private BigDecimal getPriceForCategory(Event event, String ticketCategory) {
         return event.getTicketCategories().stream()
@@ -153,9 +149,6 @@ public class BookingService {
 
     /**
      * Retrieves the email of a user by their ID.
-     *
-     * @param userId The ID of the user.
-     * @return The user's email.
      */
     private String getUserEmail(ObjectId userId) {
         User user = userDAO.findById(userId);
@@ -164,9 +157,6 @@ public class BookingService {
 
     /**
      * Extracts ticket IDs from a list of Ticket objects.
-     *
-     * @param tickets The list of Ticket objects.
-     * @return A list of ObjectIds representing ticket IDs.
      */
     private List<ObjectId> extractTicketIds(List<Ticket> tickets) {
         List<ObjectId> ticketIds = new ArrayList<>();
@@ -178,8 +168,6 @@ public class BookingService {
 
     /**
      * Retrieves the number of successful bookings.
-     *
-     * @return The count of successful bookings.
      */
     public int getSuccessfulBookings() {
         return successfulBookings.get();
@@ -187,8 +175,6 @@ public class BookingService {
 
     /**
      * Retrieves the number of failed bookings.
-     *
-     * @return The count of failed bookings.
      */
     public int getFailedBookings() {
         return failedBookings.get();

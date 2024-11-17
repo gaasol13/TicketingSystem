@@ -22,8 +22,6 @@ import dev.morphia.Datastore;
 
 public class BookingSimulation {
 
-
-
 	     private final BookingService bookingService;
 	     private final UserDAO userDAO;
 	     private final EventDAO eventDAO;
@@ -42,13 +40,9 @@ public class BookingSimulation {
 
 	     /**
 	      * Runs the booking simulation.
-	      *
-	      * @param eventId The ID of the event for which tickets are being booked.
-	      * @param numUsers The number of simulated users attempting to book tickets.
-	      * @param maxTicketsPerUser The maximum number of tickets a user can attempt to book.
 	      */
 	     public void runSimulation(ObjectId eventId, int numUsers, int maxTicketsPerUser) {
-	         ExecutorService executor = Executors.newFixedThreadPool(100); // Adjust thread pool size as needed
+	         ExecutorService executor = Executors.newFixedThreadPool(1); // Adjust thread pool size as needed
 	         List<Callable<Boolean>> tasks = new ArrayList<>();
 
 	         // Retrieve all users to simulate booking attempts
@@ -79,7 +73,7 @@ public class BookingSimulation {
 
 	             // Wait for all tasks to complete
 	             executor.shutdown();
-	             executor.awaitTermination(10, TimeUnit.MINUTES);
+	             executor.awaitTermination(1, TimeUnit.MILLISECONDS);
 
 	             // Output results
 	             System.out.println("Simulation completed.");
@@ -87,7 +81,7 @@ public class BookingSimulation {
 	             System.out.println("Successful bookings: " + bookingService.getSuccessfulBookings());
 	             System.out.println("Failed bookings: " + bookingService.getFailedBookings());
 
-	             // Verify no overselling
+	             // Verify no overselling	
 	             long totalBookedTickets = bookingDAO.findAll().stream()
 	                     .filter(booking -> booking.getEventId().equals(eventId))
 	                     .mapToInt(booking -> booking.getTickets().size())
@@ -104,32 +98,7 @@ public class BookingSimulation {
 	             e.printStackTrace();
 	         }
 	     }
-
-	     /**
-	      * Main method to execute the simulation.
-	      */
-			/*
-			 * public static void main(String[] args) { // Initialize your DataInitializer
-			 * or get the Datastore instance as per your setup DataInitializer
-			 * dataInitializer = new DataInitializer(); dataInitializer.populateData();
-			 * Datastore datastore = dataInitializer.getDatastore(); BookingDAO bookingDAO =
-			 * dataInitializer.getBookingDAO(); UserDAO userDAO =
-			 * dataInitializer.getUserDAO(); EventDAO eventDAO =
-			 * dataInitializer.getEventDAO(); TicketDAO ticketDAO =
-			 * dataInitializer.getTicketDAO();
-			 * 
-			 * // Specify the event for which to run the simulation // Replace with the
-			 * actual event ID you want to test ObjectId eventId = new
-			 * ObjectId("673133acaa85ed04a55c969d");
-			 * 
-			 * // Parameters for simulation int numberOfUsers = 5; // Simulate 1000 users
-			 * int maxTicketsPerUser = 4; // Each user can book up to 4 tickets
-			 * 
-			 * BookingSimulation simulation = new BookingSimulation(datastore, bookingDAO,
-			 * userDAO, eventDAO, ticketDAO); simulation.runSimulation(eventId,
-			 * numberOfUsers, maxTicketsPerUser);
-			 * 
-			 * // Close the DataInitializer dataInitializer.close(); }
-			 */
+	     
+	     
 
 }
