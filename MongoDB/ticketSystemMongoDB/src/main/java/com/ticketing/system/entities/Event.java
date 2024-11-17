@@ -38,7 +38,7 @@ public class Event {
 	private Venue venue; //References the venue document
 	
 	//("ticketCategories") //embeds a list of TicketCategory documents within the Event document
-	@Reference("ticketCategories")
+	@Property("ticketCategories")
 	private Set<TicketCategory> ticketCategories; //list of ticket categories for the event
 	
     public Event() {

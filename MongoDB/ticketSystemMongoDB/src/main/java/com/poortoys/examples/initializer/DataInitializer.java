@@ -120,7 +120,6 @@ public class DataInitializer {
     
     /**
      * Retrieves the list of genre names to populate.
-     * @return List of genre names
      */
     private List<String> getGenreNames() {
         return Arrays.asList(
@@ -129,9 +128,6 @@ public class DataInitializer {
         );
     }
     
-    /**
-     * Closes the MongoDB connection and Datastore resources.
-     */
     public void close() {
         if (mongoClient != null) {
             mongoClient.close();
@@ -139,18 +135,10 @@ public class DataInitializer {
         }
     }
     
-    /**
-     * Gets the Datastore instance.
-     * @return The Morphia Datastore
-     */
     public Datastore getDatastore() {
         return datastore;
     }
-    
-    /**
-     * Gets the GenreDAO instance.
-     * @return The GenreDAO
-     */
+
     public GenreDAO getGenreDAO() {
         return genreDAO;
     }

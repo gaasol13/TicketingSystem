@@ -14,15 +14,20 @@ import com.ticketing.system.entities.Ticket;
 
 import dev.morphia.Datastore;
 import dev.morphia.FindAndModifyOptions;
+import dev.morphia.ModifyOptions;
 import dev.morphia.query.FindOptions;
 import dev.morphia.query.Query;
+import dev.morphia.query.Update;
 import dev.morphia.query.UpdateOperations;
 import dev.morphia.query.experimental.filters.Filters;
 import dev.morphia.query.experimental.updates.UpdateOperators;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class TicketDAO {
 	
 	   private final Datastore datastore;
+	 
 
 	    public TicketDAO(Datastore datastore) {
 	        this.datastore = datastore;
@@ -91,51 +96,42 @@ public class TicketDAO {
 	    
 	    /**
 	     * Atomically finds and updates available tickets to 'booked' status.
-	     *
-	     * @param session The client session for transaction management.
-	     * @param eventId The ID of the event for which tickets are being booked.
-	     * @param quantity The number of tickets to book.
-	     * @return A list of booked Ticket objects.
 	     */
-	    @SuppressWarnings("removal")
-		public List<Ticket> bookAvailableTickets(ClientSession session, ObjectId eventId, int quantity) {
+	    public List<Ticket> bookAvailableTickets(ClientSession session, ObjectId eventId, int quantity) {
 	        List<Ticket> bookedTickets = new ArrayList<>();
 
-	        for (int i = 0; i < quantity; i++) {
-	            Query<Ticket> query = datastore.find(Ticket.class)
-	                .filter(Filters.eq("eventId", eventId))
-	                .filter(Filters.eq("status", "available"));
-
-	            UpdateOperations<Ticket> updateOps = datastore.createUpdateOperations(Ticket.class)
-	                .set("status", "booked")
-	                .set("purchaseDate", new Date());
-
-	            try {
-	                Ticket ticket = datastore.findAndModify(
-	                    query,
-	                    updateOps,
-	                    new FindAndModifyOptions()
-	                        .returnNew(true));
+	        try {
+	            for (int i = 0; i < quantity; i++) {
+	                Ticket ticket = datastore.find(Ticket.class)
+	                    .filter(Filters.and(
+	                        Filters.eq("event_id", eventId),
+	                        Filters.eq("status", "available")
+	                    ))
+	                    .first();
 
 	                if (ticket != null) {
+	                    ticket.setStatus("booked");
+	                    ticket.setPurchaseDate(new Date());
+	                    datastore.save(ticket);
 	                    bookedTickets.add(ticket);
 	                } else {
-	                    break; // No more available tickets
+	                    break;
 	                }
-	            } catch (Exception e) {
-	                // Log the error and continue
-	                System.err.println("Failed to book ticket for event " + eventId + ": " + e.getMessage());
-	                continue;
 	            }
+
+	            if (bookedTickets.isEmpty()) {
+	                System.err.println("No available tickets found for event " + eventId);
+	            }
+	        } catch (Exception e) {
+	            System.err.println("Failed to book tickets for event " + eventId + ": " + e.getMessage());
+	            e.printStackTrace();
+	            throw e;
 	        }
 
 	        return bookedTickets;
 	    }
 	    /**
 	     * Counts the number of available tickets for a specific event.
-	     *
-	     * @param eventId The ID of the event.
-	     * @return The count of available tickets.
 	     */
 	    public long countAvailableTickets(ObjectId eventId) {
 	        return datastore.find(Ticket.class)
@@ -150,9 +146,6 @@ public class TicketDAO {
 	    
 	    /**
 	     * Finds a User by their ObjectId.
-	     *
-	     * @param userId The ObjectId of the user.
-	     * @return The User object, or null if not found.
 	     */
 	    public Ticket findById(ObjectId id) {
 	        return datastore.find(Ticket.class)
