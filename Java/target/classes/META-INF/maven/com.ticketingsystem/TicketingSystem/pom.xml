@@ -48,6 +48,14 @@
     <version>5.6.15.Final</version>
   </dependency>
   
+  <!-- https://mvnrepository.com/artifact/com.zaxxer/HikariCP -->
+<dependency>
+    <groupId>com.zaxxer</groupId>
+    <artifactId>HikariCP</artifactId>
+    <version>6.2.0</version>
+</dependency>
+
+  
   <!-- MySQL Connector/J -->
   <dependency>
     <groupId>mysql</groupId>

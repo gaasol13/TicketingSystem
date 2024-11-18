@@ -5,6 +5,7 @@ import com.poortoys.examples.entities.TicketStatus;
 import com.poortoys.examples.entities.User;
 
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
@@ -31,11 +32,14 @@ public class TicketDAO {
         return query.getResultList();
     }
     
+    //finds and locks a ticket by its serial number using PESSIMISTIC_WRITE lock
     public Ticket findBySerialNumber(String serialNumber) {
         TypedQuery<Ticket> query = em.createQuery(
             "SELECT t FROM Ticket t WHERE t.serialNumber = :serialNumber", Ticket.class);
         query.setParameter("serialNumber", serialNumber);
-        return query.getResultList().stream().findFirst().orElse(null);
+        query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+        List<Ticket> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
     }
 
     
@@ -64,4 +68,6 @@ public class TicketDAO {
         TypedQuery<Long> query = em.createQuery("SELECT COUNT(t) FROM Ticket t", Long.class);
         return query.getSingleResult();
     }
+    
+ 
 }

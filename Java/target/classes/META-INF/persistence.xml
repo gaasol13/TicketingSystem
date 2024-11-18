@@ -38,8 +38,11 @@ version="2.0">
 			
 			 <!-- Enable batch processing for optimization -->
             <property name="hibernate.jdbc.batch_size" value="50"/>
+            <property name="hibernate.jdbc.fetch_size" value="50" />
             <property name="hibernate.order_inserts" value="true"/>
             <property name="hibernate.order_updates" value="true"/>
+            
+            
 		</properties>
 		
 	</persistence-unit>
