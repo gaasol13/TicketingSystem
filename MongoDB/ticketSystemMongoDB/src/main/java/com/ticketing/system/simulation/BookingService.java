@@ -4,9 +4,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoCollection;
 import com.poortoys.examples.dao.BookingDAO;
 import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
@@ -35,6 +40,8 @@ public class BookingService {
     // Thread-safe counters for monitoring concurrent operations
     private AtomicInteger successfulBookings = new AtomicInteger(0);
     private AtomicInteger failedBookings = new AtomicInteger(0);
+    private AtomicInteger concurrencyConflicts = new AtomicInteger(0);
+    private AtomicInteger dynamicFieldUpdates = new AtomicInteger(0);
 
     public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO, 
             UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
@@ -44,151 +51,167 @@ public class BookingService {
         this.eventDAO = eventDAO;
         this.datastore = datastore;
     }
+    
+    
+    /**
+     * POSITIVE SCENARIO: Demonstrates MongoDB's flexible document structure
+     * by handling dynamic ticket categories and pricing
+     */
+    public boolean createDynamicTicket(ObjectId eventId, Map<String, Object> dynamicFields) {
+        try {
+            long startTime = System.currentTimeMillis();
+            
+            // Create a base ticket document
+            Document ticketDoc = new Document()
+                .append("eventId", eventId)
+                .append("status", "AVAILABLE")
+                .append("created", new Date());
+            
+            // Dynamically add custom fields (MongoDB's schema flexibility)
+            dynamicFields.forEach((key, value) -> {
+                ticketDoc.append(key, value);
+                dynamicFieldUpdates.incrementAndGet();
+            });
+            
+            // Insert the dynamic ticket document without using session
+            MongoCollection<Document> collection = datastore.getDatabase().getCollection("tickets");
+            collection.insertOne(ticketDoc);
+            
+            System.out.println("Successfully created dynamic ticket with " + 
+                dynamicFields.size() + " custom fields");
+            System.out.println("Operation time: " + (System.currentTimeMillis() - startTime) + "ms");
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to create dynamic ticket: " + e.getMessage());
+            return false;
+        }
+    }
 
     /**
-     * Main booking method demonstrating MongoDB's transaction handling
-     * Shows how MongoDB manages concurrent access through:
+     * NEGATIVE SCENARIO: Shows MongoDB's concurrency challenges during ticket booking
      * - Client sessions for transactions
      * - Document-level atomicity
      * - Eventual consistency model
      */
     public boolean bookTickets(ObjectId userId, ObjectId eventId, int quantity) {
+        long startTime = System.currentTimeMillis();
         System.out.println("User " + userId + " attempting to book " + quantity + " tickets");
         
         try (ClientSession session = datastore.startSession()) {
             session.startTransaction();
             try {
-                // 1. Match MySQL's user validation first
+                // 1. Validate user and check ticket availability
                 User user = userDAO.findById(userId);
                 if (user == null) {
-                    System.out.println("User not found: " + userId);
-                    failedBookings.incrementAndGet();
-                    session.abortTransaction();
+                    recordFailure("User not found", startTime);
                     return false;
                 }
-                
-             // Get event for price calculation
+
                 Event event = eventDAO.findById(eventId);
                 if (event == null) {
-                    failedBookings.incrementAndGet();
-                    session.abortTransaction();
+                    recordFailure("Event not found", startTime);
                     return false;
                 }
 
-                // 2. Get available tickets first like MySQL
-                long availableCount  = ticketDAO.countAvailableTickets(eventId);
-                if (availableCount  < quantity) {
-                    System.out.println("Not enough tickets available");
-                    failedBookings.incrementAndGet();
-                    session.abortTransaction();
-                    return false;
-                }
-
-                // 3. Lock tickets individually like MySQL
+                // 2. Check ticket availability (potential race condition point)
                 List<Ticket> availableTickets = ticketDAO.findAvailableTicketsByEventId(eventId);
+                if (availableTickets.size() < quantity) {
+                    recordFailure("Insufficient tickets", startTime);
+                    return false;
+                }
+
+                // 3. Attempt to lock tickets (concurrency challenge demonstration)
                 List<Ticket> lockedTickets = new ArrayList<>();
-                
                 for (int i = 0; i < quantity; i++) {
-                    Ticket ticket = availableTickets.get(i);
-                    Ticket lockedTicket = ticketDAO.findAndModifyTicket(
-                        session, 
-                        ticket.getId(), 
-                        "LOCKED"
-                    );
-                    if (lockedTicket == null) {
-                        System.out.println("Failed to lock ticket: " + ticket.getId());
+                    try {
+                        Ticket ticket = availableTickets.get(i);
+                        Ticket lockedTicket = ticketDAO.findAndModifyTicket(session, ticket.getId(), "LOCKED");
+                        if (lockedTicket == null) {
+                            concurrencyConflicts.incrementAndGet();
+                            throw new RuntimeException("Concurrent access detected for ticket: " + ticket.getId());
+                        }
+                        lockedTickets.add(lockedTicket);
+                    } catch (Exception e) {
                         session.abortTransaction();
+                        recordFailure("Concurrent access conflict", startTime);
                         return false;
                     }
-                    lockedTickets.add(lockedTicket);
                 }
 
-                // 4. Create booking with locked tickets
+                // 4. Create booking if locks were successful
                 BigDecimal totalPrice = calculateTotalPrice(event, lockedTickets);
-                Booking booking = new Booking(
-                    userId,
-                    eventId,
-                    user.getEmail(), // Use actual email like MySQL
-                    new Date(),
-                    new Date(),
-                    new Date(),
-                    totalPrice,
-                    calculateDiscount(user, totalPrice), // Match MySQL's discount
-                    totalPrice,
-                    "CONFIRMED",
-                    extractTicketIds(lockedTickets)
-                );
-
-                // 5. Save booking and update tickets atomically
+                Booking booking = createBooking(user, event, lockedTickets, totalPrice);
                 bookingDAO.create(session, booking);
+
+                // 5. Update ticket status (another potential consistency challenge)
                 for (Ticket ticket : lockedTickets) {
                     ticketDAO.update(session, ticket.getId(), "SOLD");
                 }
 
                 session.commitTransaction();
-                successfulBookings.incrementAndGet();
+                recordSuccess("Booking completed successfully", startTime);
                 return true;
 
             } catch (Exception e) {
-                System.err.println("Booking failed: " + e.getMessage());
                 session.abortTransaction();
-                failedBookings.incrementAndGet();
+                recordFailure("Transaction failed: " + e.getMessage(), startTime);
                 return false;
             }
         }
     }
 
- 
+    private void recordSuccess(String message, long startTime) {
+        successfulBookings.incrementAndGet();
+        long duration = System.currentTimeMillis() - startTime;
+        System.out.println("✓ " + message + " (Duration: " + duration + "ms)");
+    }
 
-    /**
-     * Retrieves price from embedded ticket categories document
-     */
-    private BigDecimal getPriceForCategory(Event event, String ticketCategory) {
+    private void recordFailure(String reason, long startTime) {
+        failedBookings.incrementAndGet();
+        long duration = System.currentTimeMillis() - startTime;
+        System.out.println("✗ Failed: " + reason + " (Duration: " + duration + "ms)");
+    }
+
+    // Helper methods remain the same...
+    private BigDecimal calculateTotalPrice(Event event, List<Ticket> tickets) {
+        return tickets.stream()
+            .map(ticket -> getPriceForCategory(event, ticket.getTicketCategory()))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal getPriceForCategory(Event event, String category) {
         return event.getTicketCategories().stream()
-                .filter(tc -> tc.getDescription().equalsIgnoreCase(ticketCategory))
-                .map(tc -> tc.getPrice())
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
+            .filter(tc -> tc.getDescription().equalsIgnoreCase(category))
+            .map(tc -> tc.getPrice())
+            .findFirst()
+            .orElse(BigDecimal.ZERO);
     }
+
+    private Booking createBooking(User user, Event event, List<Ticket> tickets, BigDecimal totalPrice) {
+        BigDecimal discount = calculateDiscount(user, totalPrice);
+        return new Booking(
+            user.getId(),
+            event.getId(),
+            user.getEmail(),
+            new Date(),
+            new Date(),
+            new Date(),
+            totalPrice,
+            discount,
+            totalPrice.subtract(discount),
+            "CONFIRMED",
+            tickets.stream().map(Ticket::getId).collect(Collectors.toList())
+        );
+    }
+
     private BigDecimal calculateDiscount(User user, BigDecimal totalPrice) {
-        long userBookingsCount = bookingDAO.countBookingsByUser(user.getId());
-        if (userBookingsCount > 5) {
-            return totalPrice.multiply(new BigDecimal("0.05")); // 5% discount
-        }
-        return BigDecimal.ZERO;
+        return bookingDAO.countBookingsByUser(user.getId()) > 5 ?
+            totalPrice.multiply(new BigDecimal("0.05")) : BigDecimal.ZERO;
     }
 
-    
-    /**
-     * Calculates total price demonstrating MongoDB's handling of embedded documents
-     */
-    private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Ticket ticket : bookedTickets) {
-            BigDecimal price = getPriceForCategory(event, ticket.getTicketCategory());
-            total = total.add(price);
-        }
-        return total;
-    }
-
-    private String getUserEmail(ObjectId userId) {
-        User user = userDAO.findById(userId);
-        return user != null ? user.getEmail() : "unknown@example.com";
-    }
-
-    private List<ObjectId> extractTicketIds(List<Ticket> tickets) {
-        List<ObjectId> ticketIds = new ArrayList<>();
-        for (Ticket ticket : tickets) {
-            ticketIds.add(ticket.getId());
-        }
-        return ticketIds;
-    }
-
-    public int getSuccessfulBookings() {
-        return successfulBookings.get();
-    }
-
-    public int getFailedBookings() {
-        return failedBookings.get();
-    }
+    // Getters for metrics
+    public int getSuccessfulBookings() { return successfulBookings.get(); }
+    public int getFailedBookings() { return failedBookings.get(); }
+    public int getConcurrencyConflicts() { return concurrencyConflicts.get(); }
+    public int getDynamicFieldUpdates() { return dynamicFieldUpdates.get(); }
 }
