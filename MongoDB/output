@@ -1,0 +1,65 @@
+23:58:34.830 [main] INFO org.mongodb.driver.cluster -- Cluster created with settings {hosts=[localhost:27017], mode=SINGLE, requiredClusterType=UNKNOWN, serverSelectionTimeout='30000 ms'}
+23:58:34.911 [cluster-rtt-ClusterId{value='673d262ae8fd5f3e32113a35', description='null'}-localhost:27017] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:1, serverValue:539}] to localhost:27017
+23:58:34.911 [cluster-ClusterId{value='673d262ae8fd5f3e32113a35', description='null'}-localhost:27017] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:2, serverValue:540}] to localhost:27017
+23:58:34.911 [cluster-ClusterId{value='673d262ae8fd5f3e32113a35', description='null'}-localhost:27017] INFO org.mongodb.driver.cluster -- Monitor thread successfully connected to server with description ServerDescription{address=localhost:27017, type=STANDALONE, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=25, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=25706700}
+23:58:35.240 [main] WARN dev.morphia.sofia.Sofia -- No classes have been mapped.
+23:58:35.367 [main] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:3, serverValue:541}] to localhost:27017
+Starting simulation for event: Jazz Nights
+
+Running MongoDB Scenarios Simulation
+====================================
+Parameters:
+- Concurrent Users: 5
+- Max Tickets Per User: 4
+- Event: Jazz Nights
+====================================
+
+
+=== Starting MongoDB Simulation ===
+Event: Jazz Nights
+Initial ticket count: 0
+Successfully created dynamic ticket with 3 custom fields
+Operation time: 16ms
+
+Dynamic Ticket Creation Results:
+- Status: Successful
+- Processing time: 16ms
+- Fields added: 3
+User 673245fb4138da05f94cbb8a attempting to book 2 tickets
+User 673245fb4138da05f94cbb8c attempting to book 4 tickets
+User 673245fb4138da05f94cbb8c attempting to book 4 tickets
+User 673245fb4138da05f94cbb89 attempting to book 4 tickets
+User 673245fb4138da05f94cbb8f attempting to book 3 tickets
+23:58:35.647 [pool-1-thread-4] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:5, serverValue:542}] to localhost:27017
+23:58:35.648 [pool-1-thread-2] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:4, serverValue:543}] to localhost:27017
+23:58:35.650 [pool-1-thread-3] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:7, serverValue:544}] to localhost:27017
+23:58:35.652 [pool-1-thread-5] INFO org.mongodb.driver.connection -- Opened connection [connectionId{localValue:9, serverValue:545}] to localhost:27017
+✗ Failed: Insufficient tickets (Duration: 12ms)
+✗ Failed: Insufficient tickets (Duration: 11ms)
+✗ Failed: Insufficient tickets (Duration: 14ms)
+✗ Failed: Insufficient tickets (Duration: 15ms)
+✗ Failed: Insufficient tickets (Duration: 15ms)
+
+=== MongoDB Simulation Results ===
+Event: Jazz Nights
+
+POSITIVE SCENARIO Results:
+- Dynamic fields processed: 3
+
+NEGATIVE SCENARIO Results:
+- Total booking attempts: 5
+- Successful bookings: 0
+- Failed bookings: 5
+- Concurrency conflicts: 0
+- Remaining tickets: 0
+
+Key Findings:
+1. Document Flexibility: MongoDB handled dynamic fields efficiently
+2. Concurrency Challenges: 0.0% conflict rate
+=======================
+
+Simulation executor service shutdown complete.
+
+Cleaning up resources...
+MongoDB connection closed
+MongoDB connection closed
