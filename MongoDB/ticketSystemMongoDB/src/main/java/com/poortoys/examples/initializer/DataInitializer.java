@@ -60,7 +60,7 @@ public class DataInitializer {
         
         // Create Datastore and configure entity mapping
         datastore = Morphia.createDatastore(mongoClient, "ticketsystem");
-        datastore.getMapper().mapPackage("dev.morphia.example");
+        datastore.getMapper().mapPackage("dev.morphia.examples.entities");
         
         // Ensure indexes are created
         datastore.ensureIndexes();

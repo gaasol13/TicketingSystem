@@ -5,34 +5,39 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.bson.types.ObjectId;
-
 import com.mongodb.client.ClientSession;
 import com.poortoys.examples.dao.BookingDAO;
 import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.ticketing.system.entities.Booking;
+import com.ticketing.system.entities.Event;
 import com.ticketing.system.entities.Ticket;
 import com.ticketing.system.entities.User;
-import com.ticketing.system.entities.Event;
 
 import dev.morphia.Datastore;
 
+/**
+ * Service class handling ticket booking operations using MongoDB.
+ * Demonstrates MongoDB's approach to:
+ * 1. Document-based transactions
+ * 2. Schema flexibility
+ * 3. Atomic operations for concurrency
+ */
 public class BookingService {
-	private final BookingDAO bookingDAO;
+    private final BookingDAO bookingDAO;
     private final TicketDAO ticketDAO;
     private final UserDAO userDAO;
     private final EventDAO eventDAO;
     private final Datastore datastore;
     
-    // Metrics
+    // Thread-safe counters for monitoring concurrent operations
     private AtomicInteger successfulBookings = new AtomicInteger(0);
     private AtomicInteger failedBookings = new AtomicInteger(0);
 
     public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO, 
-    		UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
+            UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
         this.bookingDAO = bookingDAO;
         this.ticketDAO = ticketDAO;
         this.userDAO = userDAO;
@@ -40,104 +45,103 @@ public class BookingService {
         this.datastore = datastore;
     }
 
+    /**
+     * Main booking method demonstrating MongoDB's transaction handling
+     * Shows how MongoDB manages concurrent access through:
+     * - Client sessions for transactions
+     * - Document-level atomicity
+     * - Eventual consistency model
+     */
     public boolean bookTickets(ObjectId userId, ObjectId eventId, int quantity) {
-        System.out.println("User " + userId + " attempting to book " 
-        				+ quantity + " tickets for event " + eventId);
+        System.out.println("User " + userId + " attempting to book " + quantity + " tickets");
         
-        // Start a session for transaction
-        try (ClientSession session = datastore.startSession()) { // Corrected method
+        try (ClientSession session = datastore.startSession()) {
             session.startTransaction();
-
             try {
-                //Fetch the event to get ticket categories and pricing
-                Event event = eventDAO.findById(eventId);
+                // 1. Match MySQL's user validation first
+                User user = userDAO.findById(userId);
+                if (user == null) {
+                    System.out.println("User not found: " + userId);
+                    failedBookings.incrementAndGet();
+                    session.abortTransaction();
+                    return false;
+                }
                 
+             // Get event for price calculation
+                Event event = eventDAO.findById(eventId);
                 if (event == null) {
-                    System.out.println("Event not found: " + eventId);
                     failedBookings.incrementAndGet();
                     session.abortTransaction();
                     return false;
                 }
 
-                // Calculate total available tickets
-                long availableTickets = ticketDAO.countAvailableTickets(eventId);
-                System.out.println("Available tickets: " + availableTickets);
-
-                if (availableTickets < quantity) {
-                    System.out.println("Not enough tickets available for event: " + eventId);
+                // 2. Get available tickets first like MySQL
+                long availableCount  = ticketDAO.countAvailableTickets(eventId);
+                if (availableCount  < quantity) {
+                    System.out.println("Not enough tickets available");
                     failedBookings.incrementAndGet();
                     session.abortTransaction();
                     return false;
                 }
 
-                // Find and update available tickets atomically
-                List<Ticket> bookedTickets = ticketDAO.bookAvailableTickets(session, eventId, quantity);
-                System.out.println("Tickets booked: " + bookedTickets.size());
-
-                if (bookedTickets.size() < quantity) {
-                    System.out.println("Failed to book the desired number of tickets. Requested: " + quantity + ", Booked: " 
-                + bookedTickets.size());
-                    failedBookings.incrementAndGet();
-                    session.abortTransaction();
-                    return false;
+                // 3. Lock tickets individually like MySQL
+                List<Ticket> availableTickets = ticketDAO.findAvailableTicketsByEventId(eventId);
+                List<Ticket> lockedTickets = new ArrayList<>();
+                
+                for (int i = 0; i < quantity; i++) {
+                    Ticket ticket = availableTickets.get(i);
+                    Ticket lockedTicket = ticketDAO.findAndModifyTicket(
+                        session, 
+                        ticket.getId(), 
+                        "LOCKED"
+                    );
+                    if (lockedTicket == null) {
+                        System.out.println("Failed to lock ticket: " + ticket.getId());
+                        session.abortTransaction();
+                        return false;
+                    }
+                    lockedTickets.add(lockedTicket);
                 }
 
-                // Calculate total price
-                BigDecimal totalPrice = calculateTotalPrice(event, bookedTickets);
-                System.out.println("Total price for booking: " + totalPrice);
-
-                // Create a new booking
+                // 4. Create booking with locked tickets
+                BigDecimal totalPrice = calculateTotalPrice(event, lockedTickets);
                 Booking booking = new Booking(
-                        userId,
-                        eventId,
-                        getUserEmail(userId),
-                        new Date(), // deliveryTime
-                        new Date(), // timePaid
-                        new Date(), // timeSent
-                        totalPrice,
-                        BigDecimal.ZERO, // discount
-                        totalPrice, // finalPrice
-                        "confirmed",
-                        extractTicketIds(bookedTickets)
+                    userId,
+                    eventId,
+                    user.getEmail(), // Use actual email like MySQL
+                    new Date(),
+                    new Date(),
+                    new Date(),
+                    totalPrice,
+                    calculateDiscount(user, totalPrice), // Match MySQL's discount
+                    totalPrice,
+                    "CONFIRMED",
+                    extractTicketIds(lockedTickets)
                 );
-              
 
-                // Save the booking
-                bookingDAO.create(booking);
-                System.out.println("Booking created: " + booking);
+                // 5. Save booking and update tickets atomically
+                bookingDAO.create(session, booking);
+                for (Ticket ticket : lockedTickets) {
+                    ticketDAO.update(session, ticket.getId(), "SOLD");
+                }
 
-                // Commit the transaction
                 session.commitTransaction();
                 successfulBookings.incrementAndGet();
-                System.out.println("Booking successful for user " + userId + ". Total successful bookings: " + successfulBookings.get());
                 return true;
 
             } catch (Exception e) {
-                System.err.println("Error during booking: " + e.getMessage());
-                e.printStackTrace();
-                failedBookings.incrementAndGet();
-                System.out.println("Booking failed for user " + userId + ". Total failed bookings: " + failedBookings.get());
+                System.err.println("Booking failed: " + e.getMessage());
                 session.abortTransaction();
+                failedBookings.incrementAndGet();
                 return false;
             }
         }
     }
 
-    /**
-     * Calculates the total price for the booked tickets based on their categories.
-     */
-    private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Ticket ticket : bookedTickets) {
-            // Retrieve the price from the event's ticket categories
-            BigDecimal price = getPriceForCategory(event, ticket.getTicketCategory());
-            total = total.add(price);
-        }
-        return total;
-    }
+ 
 
     /**
-     * Retrieves the price for a given ticket category.
+     * Retrieves price from embedded ticket categories document
      */
     private BigDecimal getPriceForCategory(Event event, String ticketCategory) {
         return event.getTicketCategories().stream()
@@ -146,18 +150,32 @@ public class BookingService {
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
     }
+    private BigDecimal calculateDiscount(User user, BigDecimal totalPrice) {
+        long userBookingsCount = bookingDAO.countBookingsByUser(user.getId());
+        if (userBookingsCount > 5) {
+            return totalPrice.multiply(new BigDecimal("0.05")); // 5% discount
+        }
+        return BigDecimal.ZERO;
+    }
 
+    
     /**
-     * Retrieves the email of a user by their ID.
+     * Calculates total price demonstrating MongoDB's handling of embedded documents
      */
+    private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Ticket ticket : bookedTickets) {
+            BigDecimal price = getPriceForCategory(event, ticket.getTicketCategory());
+            total = total.add(price);
+        }
+        return total;
+    }
+
     private String getUserEmail(ObjectId userId) {
         User user = userDAO.findById(userId);
         return user != null ? user.getEmail() : "unknown@example.com";
     }
 
-    /**
-     * Extracts ticket IDs from a list of Ticket objects.
-     */
     private List<ObjectId> extractTicketIds(List<Ticket> tickets) {
         List<ObjectId> ticketIds = new ArrayList<>();
         for (Ticket ticket : tickets) {
@@ -166,16 +184,10 @@ public class BookingService {
         return ticketIds;
     }
 
-    /**
-     * Retrieves the number of successful bookings.
-     */
     public int getSuccessfulBookings() {
         return successfulBookings.get();
     }
 
-    /**
-     * Retrieves the number of failed bookings.
-     */
     public int getFailedBookings() {
         return failedBookings.get();
     }

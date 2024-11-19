@@ -49,13 +49,17 @@ public class AppMain {
         ExecutorService executorService = Executors.newFixedThreadPool(10);
         AtomicInteger successfulBookings = new AtomicInteger(0);
         AtomicInteger failedBookings = new AtomicInteger(0);
+      
         
+     // Parameters for simulation
+        int eventId = 1; // Replace with the actual event ID
+        int numberOfUsers = 5; // Simulate 5 users
+        int maxTicketsPerUser = 4; // Each user can book up to 4 tickets
+        
+                
         BookingSimulation simulation = new BookingSimulation(bookingService);
-        
-        int eventId = 1; // Replace with the actual event ID to test
         // Run the booking simulation for the specified event
         simulation.runSimulation(eventId);
-        
         // Close the EntityManager and EntityManagerFactory to release resources
         em.close();
         emf.close();
