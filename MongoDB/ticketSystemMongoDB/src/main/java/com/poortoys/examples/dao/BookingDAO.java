@@ -14,6 +14,7 @@ import dev.morphia.query.Update;
 import dev.morphia.query.experimental.updates.*;
 
 import com.mongodb.client.model.Updates;
+import com.mongodb.session.ClientSession;
 import com.ticketing.system.entities.Booking;
 
 import dev.morphia.Datastore;
@@ -27,9 +28,9 @@ public class BookingDAO {
 	}
 	
 	//Creates a new booking in the database
-	public void create(Booking booking) {
-		datastore.save(booking);
-	}
+	 public void create(ClientSession session, Booking booking) {
+	        datastore.save(booking);
+	    }
 	
 	//Find by Id
 	public Booking findById(ObjectId id) {
@@ -113,5 +114,18 @@ public class BookingDAO {
                 )
                 .count();
     }
+    
+    public long countBookingsByUser(ObjectId userId) {
+        return datastore.find(Booking.class)
+                .filter(
+                        Filters.eq("user_id", userId)
+                )
+                .count();
+    }
+
+	public void create(Booking booking) {
+		datastore.save(booking);
+		
+	}
 
 }

@@ -6,6 +6,7 @@ import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.initializer.DataInitializer;
+import com.ticketing.system.simulation.BookingService;
 import com.ticketing.system.simulation.BookingSimulation;
 
 import dev.morphia.Datastore;
@@ -20,13 +21,23 @@ public class AppMain {
     	//Create an instance of DataInitializer
     	DataInitializer dataInitializer = new DataInitializer();
     	
-    	dataInitializer.populateData();
+    	
         Datastore datastore = dataInitializer.getDatastore();
         BookingDAO bookingDAO = dataInitializer.getBookingDAO();
         UserDAO userDAO = dataInitializer.getUserDAO();
         EventDAO eventDAO = dataInitializer.getEventDAO();
         TicketDAO ticketDAO = dataInitializer.getTicketDAO();
 
+        
+        // Initialize BookingService
+        BookingService bookingService = new BookingService(
+            bookingDAO,
+            ticketDAO,
+            userDAO,
+            eventDAO,
+            datastore
+           );
+        
         // Specify the event for which to run the simulation
         // Replace with the actual event ID you want to test
         ObjectId eventId = new ObjectId("673133acaa85ed04a55c969d");
@@ -41,19 +52,7 @@ public class AppMain {
         // Close the DataInitializer
         dataInitializer.close();
 		
-		/*
-		 * try { // Directly retrieve the collection from MongoDBConnection
-		 * MongoCollection<Document> collection = MongoDBConnection.getCollection();
-		 * System.out.println("Welcome to Collection: " + collection);
-		 * 
-		 * // Verify the connection by counting documents long count =
-		 * collection.countDocuments();
-		 * System.out.println("Number of documents in the collection: " + count);
-		 * 
-		 * } catch (Exception e) { System.err.println("Error: " + e.getMessage());
-		 * e.printStackTrace(); } finally { // Ensure the MongoDB client closes properly
-		 * MongoDBConnection.close(); }
-		 */
+
 		 
     }
 }

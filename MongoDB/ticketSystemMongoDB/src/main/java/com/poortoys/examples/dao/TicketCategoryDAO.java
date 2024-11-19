@@ -84,8 +84,9 @@ public class TicketCategoryDAO {
         if (event != null && event.getTicketCategories() != null) {
             // Remove the old TicketCategory
             event.getTicketCategories().remove(ticketCategory);
-            // Add the updated TicketCategory
-            event.addTicketCategory(ticketCategory);
+            /// Add the updated TicketCategory
+            TicketCategoryDAO ticketCategoryDAO = new TicketCategoryDAO(datastore);
+            ticketCategoryDAO.addTicketCategory(eventId, ticketCategory);
             // Save the updated Event back to the database
             datastore.save(event);
             System.out.println("Updated ticket category: " + ticketCategory.getDescription() + " for event: " + event.getName());

@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.bson.types.ObjectId;
 
@@ -21,6 +22,17 @@ import com.ticketing.system.entities.User;
 import dev.morphia.Datastore;
 
 public class BookingSimulation {
+	
+	// Standardized test parameters
+    private static final int NUM_USERS = 1000;
+    private static final int MAX_TICKETS_PER_USER = 2;
+    private static final int THREAD_POOL_SIZE = 10;
+    private static final int SIMULATION_TIMEOUT_MINUTES = 1;
+    private static final String DATABASE_TYPE = "MongoDB";
+    
+    // Keep track of results the same way
+    private final AtomicInteger successfulBookings = new AtomicInteger(0);
+    private final AtomicInteger failedBookings = new AtomicInteger(0);
 
 	     private final BookingService bookingService;
 	     private final UserDAO userDAO;
@@ -42,7 +54,7 @@ public class BookingSimulation {
 	      * Runs the booking simulation.
 	      */
 	     public void runSimulation(ObjectId eventId, int numUsers, int maxTicketsPerUser) {
-	         ExecutorService executor = Executors.newFixedThreadPool(1); // Adjust thread pool size as needed
+	         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Adjust thread pool size as needed
 	         List<Callable<Boolean>> tasks = new ArrayList<>();
 
 	         // Retrieve all users to simulate booking attempts
@@ -73,13 +85,9 @@ public class BookingSimulation {
 
 	             // Wait for all tasks to complete
 	             executor.shutdown();
-	             executor.awaitTermination(1, TimeUnit.MILLISECONDS);
-
-	             // Output results
-	             System.out.println("Simulation completed.");
-	             System.out.println("Total booking attempts: " + numUsers);
-	             System.out.println("Successful bookings: " + bookingService.getSuccessfulBookings());
-	             System.out.println("Failed bookings: " + bookingService.getFailedBookings());
+	             executor.awaitTermination(1, TimeUnit.MILLISECONDS);        
+	             
+	             
 
 	             // Verify no overselling	
 	             long totalBookedTickets = bookingDAO.findAll().stream()
@@ -89,16 +97,25 @@ public class BookingSimulation {
 
 	             long totalTickets = ticketDAO.countAvailableTickets(eventId) + totalBookedTickets;
 
+	             
+	             System.out.println("\n=== Simulation Results ===");
+		         System.out.println("Database Type: " + DATABASE_TYPE);
+		         System.out.println("Concurrent Users: " + NUM_USERS);
+		         System.out.println("Total booking attempts: " + numUsers);
 	             System.out.println("Total tickets available before booking: " + totalTickets);
 	             System.out.println("Total tickets booked: " + totalBookedTickets);
+	             System.out.println("Successful bookings: " + bookingService.getSuccessfulBookings());
+	             System.out.println("Failed bookings: " + bookingService.getFailedBookings());
 	             System.out.println("Tickets remaining: " + ticketDAO.countAvailableTickets(eventId));
 
+	             System.out.println("=======================\n");
+	             
 	         } catch (InterruptedException e) {
 	             System.err.println("Simulation interrupted: " + e.getMessage());
 	             e.printStackTrace();
 	         }
 	     }
-	     
+
 	     
 
 }

@@ -20,6 +20,7 @@ import dev.morphia.query.Query;
 import dev.morphia.query.Update;
 import dev.morphia.query.UpdateOperations;
 import dev.morphia.query.experimental.filters.Filters;
+import dev.morphia.query.experimental.updates.UpdateOperator;
 import dev.morphia.query.experimental.updates.UpdateOperators;
 import lombok.extern.slf4j.Slf4j;
 
@@ -80,8 +81,11 @@ public class TicketDAO {
 	    }
 
 	    // Update an existing ticket in the database
-	    public void update(Ticket ticket) {
-	        datastore.save(ticket);
+	    public void update(ClientSession session, ObjectId ticketId, String status) {
+	        Query<Ticket> query = datastore.find(Ticket.class)
+	            .filter(Filters.eq("_id", ticketId));
+	        UpdateOperator update = UpdateOperators.set("status", status);
+	        query.update(update).execute();
 	    }
 
 	    // Delete a ticket from the database
@@ -152,5 +156,28 @@ public class TicketDAO {
 	                .filter(Filters.eq("_id", id))
 	                .first();
 	    }
+	    
+	    public Ticket findAndModifyTicket(ClientSession session, ObjectId ticketId, String status) {
+	        Query<Ticket> query = datastore.find(Ticket.class)
+	            .filter(Filters.and(
+	                Filters.eq("_id", ticketId),
+	                Filters.eq("status", "available")
+	            ));
+	        
+	        UpdateOperator updateOperator = UpdateOperators.addToSet("status", status);
+	         query.update(new ModifyOptions()
+	            .returnDocument(ReturnDocument.AFTER)
+	            .upsert(false))
+	            .execute();
+	    }
+
+		public void update(Ticket ticket) {
+			datastore.save(ticket);
+			
+		}
+
+		
+
+
 
 }
