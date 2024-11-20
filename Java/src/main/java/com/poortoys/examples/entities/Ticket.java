@@ -150,7 +150,11 @@ public class Ticket {
 				+ ", status=" + status 
 				+ ", purchaseDate=" + purchaseDate + "]";
 	}
-	
+
+
+	public BigDecimal getPrice() {
+	    return price;
+	}
 	//Override
 	
 

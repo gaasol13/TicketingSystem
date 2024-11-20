@@ -66,149 +66,116 @@ public class BookingService {
     }
     
     /**
-     * Main booking method demonstrating MySQL's transaction handling
-     * Shows how MySQL manages concurrent access through:
-     * - Pessimistic locking
-     * - ACID compliance
-     * - Transaction isolation
+     * POSITIVE SCENARIO: Demonstrates MySQL's ACID compliance
+     * with pessimistic locking for concurrent bookings
      */
-    public Booking createBooking(int userId, List<String> ticketSerialNumbers, String deliveryEmail) {
+    public Booking createBooking(int userId, List<String> ticketSerialNumbers, 
+                               String deliveryEmail) {
         EntityTransaction transaction = em.getTransaction();
         List<Ticket> lockedTickets = new ArrayList<>();
         
         try {
-            // Verify user exists before starting transaction
-            User user = userDAO.findById(userId);
-            if(user == null) {
-                failedBookings.incrementAndGet();
-                throw new RuntimeException("User not found with ID: " + userId);
-            }
-            
-            // Begin transaction for atomic operations
-            transaction = em.getTransaction();
+            // Step 1: Start transaction
             transaction.begin();
             
-            // 2. Get available tickets first - match MongoDB pattern
-            List<Ticket> availableTickets = em.createQuery(
-                "SELECT t FROM Ticket t WHERE t.serialNumber IN :serials AND t.status = :status", 
-                Ticket.class)
-                .setParameter("serials", ticketSerialNumbers)
-                .setParameter("status", TicketStatus.AVAILABLE)
-                .getResultList();
-
-            if (availableTickets.size() < ticketSerialNumbers.size()) {
-                throw new RuntimeException("Not enough tickets available");
+            // Step 2: Validate user
+            User user = userDAO.findById(userId);
+            if (user == null) {
+                throw new RuntimeException("User not found: " + userId);
             }
-            
-            // Demonstrate MySQL's pessimistic locking for concurrent access control
-            for (String serialNumber : ticketSerialNumbers) {
+
+            // Step 3: Lock and validate tickets
+            for (String serial : ticketSerialNumbers) {
                 try {
+                    // Use pessimistic locking
                     Ticket ticket = em.createQuery(
                         "SELECT t FROM Ticket t " +
-                        "WHERE t.serialNumber = :serialNumber " +
-                        "AND t.status = :status", Ticket.class)
-                        .setParameter("serialNumber", serialNumber)
+                        "WHERE t.serialNumber = :serial " +
+                        "AND t.status = :status",
+                        Ticket.class)
+                        .setParameter("serial", serial)
                         .setParameter("status", TicketStatus.AVAILABLE)
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE) // Key for concurrency control
+                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                         .getSingleResult();
                     
+                    ticket.setStatus(TicketStatus.RESERVED);
+                    em.merge(ticket);
                     lockedTickets.add(ticket);
-                } catch (NoResultException nre) {
-                    throw new RuntimeException("Ticket not available: " + serialNumber);
+                } catch (NoResultException e) {
+                    throw new RuntimeException("Ticket not available: " + serial);
                 }
             }
-            
-            // Validate locked tickets
-            if (lockedTickets.isEmpty()) {
-                throw new RuntimeException("No tickets could be locked for booking");
-            }
 
-            // Demonstrate relationship navigation in MySQL
-            Event event = lockedTickets.get(0).getEvent();
-
-            // Calculate pricing
-            BigDecimal totalPrice = calculateTotalPrice(lockedTickets);
-            BigDecimal discount = calculateDiscount(user, totalPrice);
-            BigDecimal finalPrice = totalPrice.subtract(discount);
-
-            // Create booking entity demonstrating MySQL's structured data model
+            // Step 4: Create booking
             Booking booking = new Booking();
             booking.setUser(user);
             booking.setDeliveryAddressEmail(deliveryEmail);
-            booking.setDeliveryTime(new Date());
-            booking.setTimePaid(new Date());
-            booking.setTotalPrice(totalPrice);
-            booking.setDiscount(discount);
-            booking.setFinalPrice(finalPrice);
+            booking.setBookingTime(new Date());
+            booking.setTotalPrice(calculateTotalPrice(lockedTickets));
             booking.setBookingStatus(BookingStatus.CONFIRMED);
             
-            // Persist booking with transaction protection
             em.persist(booking);
-            em.flush(); // Ensure booking is persisted before creating booking tickets
 
-         // 5. Update tickets status within same transaction
+            // Step 5: Update ticket status
             for (Ticket ticket : lockedTickets) {
-                BookingTicket bookingTicket = new BookingTicket();
-                bookingTicket.setBooking(booking);
-                bookingTicket.setTicket(ticket);
-                em.persist(bookingTicket);
-
                 ticket.setStatus(TicketStatus.SOLD);
-                ticket.setPurchaseDate(new Date());
+                ticket.setPurchaseDate(new Date()); // Use the current date
                 em.merge(ticket);
             }
 
-            // Commit all changes atomically
-            em.flush();
+            // Step 6: Commit transaction
             transaction.commit();
             successfulBookings.incrementAndGet();
-            
             return booking;
 
-        } catch (PessimisticLockException e) {
-            // Handle concurrent access conflicts
-            System.err.println("Lock acquisition failed: " + e.getMessage());
-            handleTransactionRollback(transaction);
-            failedBookings.incrementAndGet();
-            throw new RuntimeException("Could not lock all required tickets. Please try again.", e);
         } catch (Exception e) {
-            System.err.println("Booking failed: " + e.getMessage());
-            handleTransactionRollback(transaction);
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
             failedBookings.incrementAndGet();
             throw new RuntimeException("Booking failed: " + e.getMessage(), e);
         }
     }
-    
+
     /**
-     * Handles transaction rollback in case of failures
-     * Demonstrates MySQL's transaction rollback capabilities
+     * NEGATIVE SCENARIO: Demonstrates challenges with schema modifications
+     * Returns time taken to modify schema in milliseconds
      */
-    private void handleTransactionRollback(EntityTransaction transaction) {
+    public long modifyTicketSchema(String newColumnName, String columnType) {
+        EntityTransaction transaction = em.getTransaction();
+        long startTime = System.currentTimeMillis();
+        
         try {
-            if (transaction != null && transaction.isActive()) {
+            transaction.begin();
+            
+            // Execute schema modification
+            em.createNativeQuery(
+                "ALTER TABLE tickets " +
+                "ADD COLUMN " + newColumnName + " " + columnType)
+                .executeUpdate();
+            
+            transaction.commit();
+            return System.currentTimeMillis() - startTime;
+            
+        } catch (Exception e) {
+            if (transaction.isActive()) {
                 transaction.rollback();
             }
-        } catch (Exception e) {
-            System.err.println("Error during transaction rollback: " + e.getMessage());
+            throw new RuntimeException("Schema modification failed: " + 
+                                     e.getMessage(), e);
         }
-    }
-    
-    // Supporting methods...
-    private BigDecimal calculateTotalPrice(List<Ticket> tickets) {
-        return tickets.stream()
-            .map(ticket -> ticket.getTicketCategory().getPrice())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    
-    private BigDecimal calculateDiscount(User user, BigDecimal totalPrice) {
-        List<Booking> userBookings = bookingDAO.findByUserId(user.getUserId());
-        if (userBookings.size() > 5) {
-            return totalPrice.multiply(new BigDecimal("0.05")); // 5% discount
-        }
-        return BigDecimal.ZERO;
     }
 
-    // Metrics for monitoring concurrent operations
+    /**
+     * Helper method to calculate total price of tickets
+     */
+    private BigDecimal calculateTotalPrice(List<Ticket> tickets) {
+        return tickets.stream()
+            .map(Ticket::getPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Getter methods for metrics
     public int getSuccessfulBookings() {
         return successfulBookings.get();
     }

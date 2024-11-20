@@ -185,6 +185,11 @@ public class Booking {
                 '}';
     }
 
+	public void setBookingTime(Date date) {
+		// TODO Auto-generated method stub
+		
+	}
+
 
     
 }
