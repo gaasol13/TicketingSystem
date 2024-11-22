@@ -47,6 +47,13 @@ public class BookingService {
         this.bookingDAO = bookingDAO;
         this.bookingTicketDAO = bookingTicketDAO;
         this.eventDAO = eventDAO;
+        
+        try {
+            em.createNativeQuery("SELECT 1").getSingleResult();
+            System.out.println("Database connection verified in BookingService.");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to verify database connection", e);
+        }
     }
     
     /**
@@ -100,6 +107,10 @@ public class BookingService {
                         .setParameter("status", TicketStatus.AVAILABLE) // set status parameter
                         .setLockMode(LockModeType.PESSIMISTIC_WRITE) // lock the row
                         .getSingleResult(); // get the ticket
+                    
+                    // Clear the persistence context to avoid stale data
+                    em.flush();
+                    em.clear();
                     
                     // set ticket status to 'RESERVED'
                     ticket.setStatus(TicketStatus.RESERVED);

@@ -22,42 +22,47 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AppMain {
 
+    public static void main(String[] args) {
+    	// Initialize JPA EntityManagerFactory and EntityManager
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("ticketingsystem");
+        EntityManager em = emf.createEntityManager();
 
-	    public static void main(String[] args) {
-	    
-	        EntityManagerFactory emf = Persistence.createEntityManagerFactory("ticketingsystem");
-	        EntityManager em = emf.createEntityManager();
+        // Initialize DAOs with the EntityManager
+        BookingDAO bookingDAO = new BookingDAO(em);
+        TicketDAO ticketDAO = new TicketDAO(em);
+        UserDAO userDAO = new UserDAO(em);
+        EventDAO eventDAO = new EventDAO(em);
+        BookingTicketDAO bookingTicketDAO = new BookingTicketDAO(em);  
 
-	        //initialize DAOs with the EntityManager
-	        BookingDAO bookingDAO = new BookingDAO(em);
-	        TicketDAO ticketDAO = new TicketDAO(em);
-	        UserDAO userDAO = new UserDAO(em);
-	        EventDAO eventDAO = new EventDAO(em);
-	        BookingTicketDAO bookingTicketDAO = new BookingTicketDAO(em);  
+        // Initialize the BookingService with the correct parameter order
+        BookingService bookingService = new BookingService(
+            em,
+            userDAO,
+            ticketDAO,
+            bookingDAO,
+            bookingTicketDAO,
+            eventDAO
+        );
+        
 
-	        // Initialize the MySQLBookingService with the required DAOs
-	        BookingService bookingService = new BookingService(
-	        		  em,
-	                  userDAO,
-	                  ticketDAO,
-	                  bookingDAO,
-	                  bookingTicketDAO,
-	                  eventDAO
-	        );
+     // Create an instance of BookingSimulation with all required parameters
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        AtomicInteger successfulBookings = new AtomicInteger(0);
+        AtomicInteger failedBookings = new AtomicInteger(0);
+      
+        
+     // Parameters for simulation
+        int eventId = 1; // Replace with the actual event ID
+        int numberOfUsers = 5; // Simulate 5 users
+        int maxTicketsPerUser = 4; // Each user can book up to 4 tickets
+        
+                
+        BookingSimulation simulation = new BookingSimulation(bookingService, userDAO);
+        // Run the booking simulation for the specified event
+        simulation.runFullSimulation(eventId);
+        // Close the EntityManager and EntityManagerFactory to release resources
+        em.close();
+        emf.close();
+    }
 
-	        //Creeeate an instance of MySQLBookingSimulation
-	        BookingSimulation simulation = new BookingSimulation(
-	            bookingService, userDAO
-	        );
-
-	        //parameters for simulation
-	        int eventId = 1; // "jazz nights"
-
-	        //run the full simulation for the specified event
-	        simulation.runFullSimulation(eventId);
-
-	        // Close the EntityManager and EntityManagerFactory to release resources
-	        em.close();
-	        emf.close();
-	    }
-	}
+}

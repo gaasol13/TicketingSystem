@@ -69,7 +69,7 @@ public class TicketDAO {
         return query.getSingleResult();
     }
     
-    public List<Ticket> findAvailableTicketsWithLock(Integer eventId, TicketStatus status, int limit) {
+    public List<Ticket> findAvailableTicketsWithLock(Integer eventId, TicketDAO status, int limit) {
         TypedQuery<Ticket> query = em.createQuery(
             "SELECT t FROM Ticket t " +
             "WHERE t.event.eventId = :eventId " +
