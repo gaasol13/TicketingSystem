@@ -150,11 +150,14 @@ public class Ticket {
 				+ ", status=" + status 
 				+ ", purchaseDate=" + purchaseDate + "]";
 	}
-
-
+	
 	public BigDecimal getPrice() {
-	    return price;
+	    return this.ticketCategory != null ? this.ticketCategory.getPrice() : BigDecimal.ZERO;
 	}
+
+	/*
+	 * public BigDecimal getPrice() { return price; }
+	 */
 	//Override
 	
 

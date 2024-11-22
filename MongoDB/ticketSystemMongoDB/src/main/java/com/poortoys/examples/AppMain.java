@@ -29,10 +29,10 @@ public class AppMain {
             EventDAO eventDAO = dataInitializer.getEventDAO();
             TicketDAO ticketDAO = dataInitializer.getTicketDAO();
 
-            // Specify the event ID for simulation
+            //Specify the event ID for simulation
             ObjectId eventId = new ObjectId("673133acaa85ed04a55c969d");
             
-            // Verify event exists
+            //Verify event exists
             Event event = eventDAO.findById(eventId);
             if (event == null) {
                 System.err.println("Error: Event not found with ID: " + eventId);

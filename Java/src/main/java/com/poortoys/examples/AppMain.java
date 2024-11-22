@@ -11,8 +11,8 @@ import com.poortoys.examples.dao.GenreDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.initilizer.DataInitializer;
-import com.porrtoys.examples.simulation.BookingService;
-import com.porrtoys.examples.simulation.BookingSimulation;
+import com.poortoys.examples.simulation.BookingService;
+import com.poortoys.examples.simulation.BookingSimulation;
 
 //import com.example.entities.Genre;
 import java.util.List;
@@ -24,11 +24,11 @@ public class AppMain {
 
 
 	    public static void main(String[] args) {
-	        // Initialize JPA EntityManagerFactory and EntityManager
+	    
 	        EntityManagerFactory emf = Persistence.createEntityManagerFactory("ticketingsystem");
 	        EntityManager em = emf.createEntityManager();
 
-	        // Initialize DAOs with the EntityManager
+	        //initialize DAOs with the EntityManager
 	        BookingDAO bookingDAO = new BookingDAO(em);
 	        TicketDAO ticketDAO = new TicketDAO(em);
 	        UserDAO userDAO = new UserDAO(em);
@@ -45,15 +45,15 @@ public class AppMain {
 	                  eventDAO
 	        );
 
-	        // Create an instance of MySQLBookingSimulation
+	        //Creeeate an instance of MySQLBookingSimulation
 	        BookingSimulation simulation = new BookingSimulation(
 	            bookingService, userDAO
 	        );
 
-	        // Parameters for simulation
-	        int eventId = 1; // Replace with the actual event ID
+	        //parameters for simulation
+	        int eventId = 1; // "jazz nights"
 
-	        // Run the full simulation for the specified event
+	        //run the full simulation for the specified event
 	        simulation.runFullSimulation(eventId);
 
 	        // Close the EntityManager and EntityManagerFactory to release resources
