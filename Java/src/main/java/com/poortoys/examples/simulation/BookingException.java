@@ -1,4 +1,4 @@
-package com.porrtoys.examples.simulation;
+package com.poortoys.examples.simulation;
 
 public class BookingException extends Exception{
 	public BookingException(String message) {

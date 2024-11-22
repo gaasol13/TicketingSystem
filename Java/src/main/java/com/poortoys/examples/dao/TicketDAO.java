@@ -69,5 +69,22 @@ public class TicketDAO {
         return query.getSingleResult();
     }
     
+    public List<Ticket> findAvailableTicketsWithLock(Integer eventId, TicketStatus status, int limit) {
+        TypedQuery<Ticket> query = em.createQuery(
+            "SELECT t FROM Ticket t " +
+            "WHERE t.event.eventId = :eventId " +
+            "AND t.status = :status " +
+            "ORDER BY t.ticketId",
+            Ticket.class
+        );
+        
+        query.setParameter("eventId", eventId);
+        query.setParameter("status", status);
+        query.setMaxResults(limit);
+        query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+        
+        return query.getResultList();
+    }
+    
  
 }

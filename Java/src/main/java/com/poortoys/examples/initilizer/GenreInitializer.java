@@ -1,4 +1,5 @@
 package com.poortoys.examples.initilizer;
+import java.util.Arrays;
 import java.util.List;
 
 import com.poortoys.examples.dao.GenreDAO;
@@ -27,6 +28,19 @@ public class GenreInitializer implements Initializer{
 	@Override
 	public void initialize() {
 		System.out.println("Initializing genres>>>>");
+		  // Define all genres
+        List<String> genreNames = Arrays.asList(
+            "Rock",
+            "Jazz",
+            "Classical",
+            "Pop",
+            "Electronic",
+            "Hip-Hop",
+            "Country",
+            "Blues",
+            "Reggae",
+            "Metal"
+        );
 		for (String name : genreNames) {
 			if(genreDAO.findByName(name) == null) {
 				Genre genre = new Genre(name);
