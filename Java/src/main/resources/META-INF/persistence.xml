@@ -29,7 +29,7 @@ version="2.0">
 			<!-- Database schema "update" will create/update tables on entity classes -->
 			<property name="hibernate.hbm2ddl.auto" value="update"/>
 			<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
-			 <property name="hibernate.connection.pool_size" value="1"/>
+			 <property name="hibernate.connection.pool_size" value="5"/>
 			<!-- Show SQL queries in console for debugging -->
 			<property name="hibernate.show_sql" value="true"/>
 			<!-- Format SQL for better readability -->
@@ -43,6 +43,8 @@ version="2.0">
             <property name="hibernate.jdbc.fetch_size" value="50" />
             <property name="hibernate.order_inserts" value="true"/>
             <property name="hibernate.order_updates" value="true"/>
+            
+            
             
             
 		</properties>

@@ -27,7 +27,7 @@ public class Ticket {
 	private Event event;
 	
 	//Many tickets belong to one ticket category
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "ticket_category_id")
 	private TicketCategory ticketCategory;
 	
@@ -125,9 +125,15 @@ public class Ticket {
 	public TicketStatus getStatus() {
 		return status;
 	}
+	
+	
 
 	public void setStatus(TicketStatus status) {
 		this.status = status;
+	}
+	
+	public BigDecimal getPrice() {
+	    return this.ticketCategory != null ? this.ticketCategory.getPrice() : BigDecimal.ZERO;
 	}
 
 	public Date getPurchaseDate() {
@@ -151,9 +157,7 @@ public class Ticket {
 				+ ", purchaseDate=" + purchaseDate + "]";
 	}
 	
-	public BigDecimal getPrice() {
-	    return this.ticketCategory != null ? this.ticketCategory.getPrice() : BigDecimal.ZERO;
-	}
+
 
 	/*
 	 * public BigDecimal getPrice() { return price; }

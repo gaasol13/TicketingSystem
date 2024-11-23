@@ -113,17 +113,13 @@ public class TicketCategory {
 		this.event = event;
 	}
 
-	@Override
-	public String toString() {
-		return "TicketCategory [ticketCategoryId=" + ticketCategoryId 
-				+ ", description=" + description 
-				+ ", price=" + price
-				+ ", startDate=" + startDate 
-				+ ", endDate=" + endDate 
-				+ ", area=" + area 
-				+ ", event=" + (event != null ? event.getEventName() : "null")
-				+ "]";
-	}
+    @Override
+    public String toString() {
+        return "TicketCategory [ticketCategoryId=" + ticketCategoryId + 
+               ", area=" + area + 
+               ", description=" + description + 
+               ", price=" + price + "]";
+    }
 
 	
 	

@@ -4,65 +4,92 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
-import com.poortoys.examples.dao.BookingDAO;
-import com.poortoys.examples.dao.BookingTicketDAO;
-import com.poortoys.examples.dao.EventDAO;
-import com.poortoys.examples.dao.GenreDAO;
-import com.poortoys.examples.dao.TicketDAO;
-import com.poortoys.examples.dao.UserDAO;
-import com.poortoys.examples.initilizer.DataInitializer;
-import com.poortoys.examples.simulation.BookingService;
-import com.poortoys.examples.simulation.BookingSimulation;
-
-//import com.example.entities.Genre;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.poortoys.examples.dao.*;
+import com.poortoys.examples.simulation.*;
 
 public class AppMain {
-
     public static void main(String[] args) {
-    	// Initialize JPA EntityManagerFactory and EntityManager
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("ticketingsystem");
-        EntityManager em = emf.createEntityManager();
-
-        // Initialize DAOs with the EntityManager
-        BookingDAO bookingDAO = new BookingDAO(em);
-        TicketDAO ticketDAO = new TicketDAO(em);
-        UserDAO userDAO = new UserDAO(em);
-        EventDAO eventDAO = new EventDAO(em);
-        BookingTicketDAO bookingTicketDAO = new BookingTicketDAO(em);  
-
-        // Initialize the BookingService with the correct parameter order
-        BookingService bookingService = new BookingService(
-            em,
-            userDAO,
-            ticketDAO,
-            bookingDAO,
-            bookingTicketDAO,
-            eventDAO
-        );
+        EntityManagerFactory emf = null;
+        EntityManager em = null;
         
+        try {
+            System.out.println("Starting Ticketing System Simulation...");
+            
+            // Create EntityManagerFactory
+            emf = Persistence.createEntityManagerFactory("ticketingsystem");
+            System.out.println("EntityManagerFactory created successfully");
+            
+            // Create EntityManager
+            em = emf.createEntityManager();
+            System.out.println("EntityManager created successfully");
+            
+            // Test initial connection
+            em.getTransaction().begin();
+            Object result = em.createNativeQuery("SELECT 1").getSingleResult();
+            em.getTransaction().commit();
+            System.out.println("Database connection test successful");
+            
+            // Initialize DAOs with transaction support
+            BookingDAO bookingDAO = new BookingDAO(em);
+            TicketDAO ticketDAO = new TicketDAO(em);
+            UserDAO userDAO = new UserDAO(em);
+            EventDAO eventDAO = new EventDAO(em);
+            BookingTicketDAO bookingTicketDAO = new BookingTicketDAO(em);
+            System.out.println("DAOs initialized successfully");
 
-     // Create an instance of BookingSimulation with all required parameters
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
-        AtomicInteger successfulBookings = new AtomicInteger(0);
-        AtomicInteger failedBookings = new AtomicInteger(0);
-      
-        
-     // Parameters for simulation
-        int eventId = 1; // Replace with the actual event ID
-        int numberOfUsers = 5; // Simulate 5 users
-        int maxTicketsPerUser = 4; // Each user can book up to 4 tickets
-        
-                
-        BookingSimulation simulation = new BookingSimulation(bookingService, userDAO);
-        // Run the booking simulation for the specified event
-        simulation.runFullSimulation(eventId);
-        // Close the EntityManager and EntityManagerFactory to release resources
-        em.close();
-        emf.close();
+            // Initialize the BookingService
+            BookingService bookingService = new BookingService(
+                em,
+                userDAO,
+                ticketDAO,
+                bookingDAO,
+                bookingTicketDAO,
+                eventDAO
+            );
+            System.out.println("BookingService initialized successfully");
+
+            // Create simulation instance
+            BookingSimulation simulation = new BookingSimulation(bookingService, userDAO);
+            System.out.println("BookingSimulation created successfully");
+
+            // Run simulation
+            System.out.println("\nStarting simulation for Event ID: 1");
+            simulation.runFullSimulation(1);
+            
+            // Keep console open
+            System.out.println("\nSimulation completed. Press Enter to exit...");
+            System.in.read();
+
+        } catch (Exception e) {
+            System.err.println("Error during execution:");
+            e.printStackTrace();
+            try {
+                System.out.println("Press Enter to exit...");
+                System.in.read();
+            } catch (Exception ex) {
+                // ignore
+            }
+        } finally {
+            // Clean up resources
+            if (em != null && em.isOpen()) {
+                try {
+                    if (em.getTransaction().isActive()) {
+                        em.getTransaction().rollback();
+                    }
+                    em.close();
+                    System.out.println("EntityManager closed successfully");
+                } catch (Exception e) {
+                    System.err.println("Error closing EntityManager: " + e.getMessage());
+                }
+            }
+            if (emf != null && emf.isOpen()) {
+                try {
+                    emf.close();
+                    System.out.println("EntityManagerFactory closed successfully");
+                } catch (Exception e) {
+                    System.err.println("Error closing EntityManagerFactory: " + e.getMessage());
+                }
+            }
+        }
     }
-
 }

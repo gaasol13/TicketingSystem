@@ -47,8 +47,8 @@ public class Booking {
     @Column(name = "discount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 
-    @Column(name = "final_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal finalPrice;
+    @Column(name = "final_price")
+    private BigDecimal finalPrice = BigDecimal.ZERO; 
 
     @Convert(converter = BookingStatusConverter.class)
     @Column(name = "booking_status", nullable = false, length = 15)

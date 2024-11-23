@@ -88,57 +88,66 @@ public class BookingSimulation {
      */
     private void runPositiveScenario(int eventId) {
         System.out.println("Running transaction consistency scenario...");
-    
-        // latch to synchronize the start of all booking tasks
+
         CountDownLatch startLatch = new CountDownLatch(1);
-        // latch to wait for all booking tasks to complete
         CountDownLatch completionLatch = new CountDownLatch(NUM_USERS);
-    
-        // get the list of available ticket serials for the event
+
+        // Get available tickets
         List<String> availableTickets = bookingService.getAvailableTicketSerials(eventId);
-        // get all users from the database
+        System.out.println("Found " + availableTickets.size() + " available tickets");
+        
+        // Get all users
         List<User> users = userDAO.findAll();
-        Random random = new Random(); // random number generator for selecting users and tickets
-    
-        // submit booking tasks for each user
+        System.out.println("Found " + users.size() + " users");
+        
+        Random random = new Random();
+
+        // Submit booking tasks
         for (int i = 0; i < NUM_USERS; i++) {
             executorService.submit(() -> {
                 try {
-                    startLatch.await(); // wait for the signal to start
-                    long startTime = System.currentTimeMillis(); // record the start time of the booking attempt
-    
-                    // pick a random user from the list
+                    startLatch.await();
+                    
+                    // Select random user
                     User user = users.get(random.nextInt(users.size()));
-                    // decide the number of tickets to book (1 to MAX_TICKETS_PER_USER)
+                    System.out.println("Selected user: " + user.getUserName());
+                    
+                    // Select 1-2 tickets
                     int ticketsToBook = 1 + random.nextInt(MAX_TICKETS_PER_USER);
-                    // select random tickets from the available list
-                    List<String> selectedTickets = selectRandomTickets(availableTickets, ticketsToBook);
-    
+                    List<String> selectedTickets;
+                    
+                    synchronized(this) {
+                        selectedTickets = selectRandomTickets(availableTickets, ticketsToBook);
+                    }
+                    
+                    System.out.println("User " + user.getUserName() + " attempting to book " + 
+                                     selectedTickets.size() + " tickets: " + selectedTickets);
+
                     try {
-                        // try to create a booking with the selected tickets
                         bookingService.createBooking(user.getUserId(), selectedTickets, user.getEmail());
-                        recordSuccess(); // record a successful booking
+                        recordSuccess();
+                        System.out.println("Booking successful for user: " + user.getUserName());
                     } catch (Exception e) {
-                        recordFailure(); // record a failed booking
+                        recordFailure();
+                        System.err.println("Booking failed for user " + user.getUserName() + ": " + e.getMessage());
                     }
                 } catch (Exception e) {
-                    failedBookings.incrementAndGet(); // increment failed bookings in case of unexpected exceptions
+                    failedBookings.incrementAndGet();
+                    System.err.println("Task execution failed: " + e.getMessage());
                 } finally {
-                    completionLatch.countDown(); // signal that the booking task has completed
+                    completionLatch.countDown();
                 }
             });
         }
-    
-        startLatch.countDown(); // signal all booking tasks to start
-    
+
+        startLatch.countDown();
+        
         try {
-            // wait for all booking tasks to complete or timeout after SIMULATION_DURATION_SECONDS
             completionLatch.await(SIMULATION_DURATION_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // restore the interrupted status
+            Thread.currentThread().interrupt();
         }
     }
-
     /**
      * runs the negative scenario of the simulation, which tests the system's ability
      * to handle schema modifications under concurrent operations

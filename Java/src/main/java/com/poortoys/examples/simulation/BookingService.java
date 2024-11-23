@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.NoResultException;
@@ -39,6 +40,9 @@ public class BookingService {
      * constructor for BookingService
      * initializes the EntityManager and DAOs required for booking operations
      */
+    
+   //private final ThreadLocal<EntityManager> threadLocalEm = new ThreadLocal<>();
+    
     public BookingService(EntityManager em, UserDAO userDAO, TicketDAO ticketDAO, 
                           BookingDAO bookingDAO, BookingTicketDAO bookingTicketDAO, EventDAO eventDAO) {
         this.em = em;
@@ -48,6 +52,8 @@ public class BookingService {
         this.bookingTicketDAO = bookingTicketDAO;
         this.eventDAO = eventDAO;
         
+ 
+        
         try {
             em.createNativeQuery("SELECT 1").getSingleResult();
             System.out.println("Database connection verified in BookingService.");
@@ -56,6 +62,12 @@ public class BookingService {
         }
     }
     
+	/*
+	 * private EntityManager getEntityManager() { EntityManager entityManager =
+	 * threadLocalEm.get(); if (entityManager == null || !entityManager.isOpen()) {
+	 * entityManager = emf.createEntityManager(); threadLocalEm.set(entityManager);
+	 * } return entityManager; }
+	 */
     /**
      * retrieves available tickets using MySQL's query capabilities
      * demonstrates:
@@ -82,79 +94,104 @@ public class BookingService {
      * POSITIVE SCENARIO: demonstrates MySQL's ACID compliance
      * with pessimistic locking for concurrent bookings
      */
-    public Booking createBooking(int userId, List<String> ticketSerialNumbers, String deliveryEmail) {
-        EntityTransaction transaction = em.getTransaction(); // get the transaction object
-        List<Ticket> lockedTickets = new ArrayList<>(); // list to hold locked tickets
+    public synchronized Booking createBooking(int userId, List<String> ticketSerialNumbers, String deliveryEmail) {
+        EntityTransaction transaction = em.getTransaction();
+        List<Ticket> lockedTickets = new ArrayList<>();
         
         try {
-            // start the transaction
-            transaction.begin();
-            
-            // check if user exists
-            User user = userDAO.findById(userId); // find the user
-            if (user == null) {
-                throw new RuntimeException("User not found: " + userId); // can't find user
-            }
+        	 transaction.begin();
+             
+             // Get user with fresh EntityManager
+             User user = em.find(User.class, userId);
+             if (user == null) {
+                 throw new RuntimeException("User not found: " + userId);
+             }
 
-            //lock and validate tickets
+            BigDecimal totalPrice = BigDecimal.ZERO;
+            
+            // Lock and validate tickets
             for (String serial : ticketSerialNumbers) {
                 try {
-                    // select the ticket with given serial and status 'AVAILABLE', lock it
+                    System.out.println("Attempting to lock ticket: " + serial);
+                    
+                    // Updated query to match your table structure
                     Ticket ticket = em.createQuery(
-                        "SELECT t FROM Ticket t WHERE t.serialNumber = :serial AND t.status = :status",
+                        "SELECT t FROM Ticket t " +
+                        "LEFT JOIN FETCH t.ticketCategory tc " +
+                        "WHERE t.serialNumber = :serial AND t.status = 'available'",
                         Ticket.class)
-                        .setParameter("serial", serial) // set serial parameter
-                        .setParameter("status", TicketStatus.AVAILABLE) // set status parameter
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE) // lock the row
-                        .getSingleResult(); // get the ticket
+                        .setParameter("serial", serial)
+                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                        .setHint("javax.persistence.lock.timeout", 5000)
+                        .getSingleResult();
                     
-                    // Clear the persistence context to avoid stale data
-                    em.flush();
-                    em.clear();
+                    TicketCategory category = ticket.getTicketCategory();
+                    if (category == null) {
+                        throw new RuntimeException("Ticket " + serial + " has no category assigned");
+                    }
                     
-                    // set ticket status to 'RESERVED'
-                    ticket.setStatus(TicketStatus.RESERVED);
-                    em.merge(ticket); // update the ticket
-                    lockedTickets.add(ticket); // add to locked tickets
+                    System.out.println("Ticket locked successfully: " + serial + 
+                                     ", Area: " + category.getArea() + 
+                                     ", Price: " + category.getPrice());
+                    
+                    ticket.setStatus(TicketStatus.RESERVED);  // Match your enum/string status
+                    totalPrice = totalPrice.add(category.getPrice());
+                    lockedTickets.add(ticket);
+                    em.merge(ticket);
+                    
                 } catch (NoResultException e) {
-                    //ticket not available, that's unfortunate
+                    System.err.println("Failed to find available ticket: " + serial);
                     throw new RuntimeException("Ticket not available: " + serial);
                 } catch (PessimisticLockException e) {
-                    //couldn't lock ticket, maybe someone else is booking it
-                    failedBookings.incrementAndGet(); //ncrement failed bookings
+                    System.err.println("Failed to lock ticket: " + serial);
                     throw new RuntimeException("Concurrent access detected for ticket: " + serial);
                 }
             }
 
-            // create booking record
-            Booking booking = new Booking(); // new booking
-            booking.setUser(user); // set user
-            booking.setDeliveryAddressEmail(deliveryEmail); // set email
-            booking.setBookingTime(new Date()); // set booking time
-            booking.setTotalPrice(calculateTotalPrice(lockedTickets)); // calculate total price
-            booking.setBookingStatus(BookingStatus.CONFIRMED); // set status
-            
-            em.persist(booking); // save booking
+            System.out.println("All tickets locked. Creating booking with total price: " + totalPrice);
 
-            // update tickets to 'SOLD'
+            // Create booking first
+            Booking booking = new Booking();
+            booking.setUser(user);
+            booking.setDeliveryAddressEmail(deliveryEmail);
+            booking.setBookingTime(new Date());
+            booking.setTotalPrice(totalPrice);
+            booking.setDiscount(BigDecimal.ZERO);
+            booking.setFinalPrice(totalPrice);
+            booking.setBookingStatus(BookingStatus.CONFIRMED);
+            
+            em.persist(booking);
+            em.flush(); // Ensure booking is persisted first
+
+            // Then create BookingTicket associations
             for (Ticket ticket : lockedTickets) {
-                ticket.setStatus(TicketStatus.SOLD); // set status
-                ticket.setPurchaseDate(new Date()); // set purchase date
-                em.merge(ticket); // save ticket
+                BookingTicket bookingTicket = new BookingTicket();
+                bookingTicket.setBooking(booking);
+                bookingTicket.setTicket(ticket);
+                em.persist(bookingTicket); // Persist each BookingTicket
+                
+                ticket.setStatus(TicketStatus.SOLD);
+                ticket.setPurchaseDate(new Date());
+                em.merge(ticket);
             }
 
-            // commit transaction
-            transaction.commit(); // commit changes
-            successfulBookings.incrementAndGet(); // increment successful bookings
-            return booking; // return the booking
+            em.flush();
+            transaction.commit();
+            System.out.println("Transaction committed successfully");
+            
+            successfulBookings.incrementAndGet();
+            return booking;
 
         } catch (Exception e) {
-            // something went wrong
-            if (transaction.isActive()) {
-                transaction.rollback(); // rollback
+            if (transaction != null && transaction.isActive()) {
+                transaction.rollback();
             }
-            failedBookings.incrementAndGet(); // increment failed bookings
-            throw new RuntimeException("Booking failed: " + e.getMessage(), e); // rethrow exception
+            throw new RuntimeException("Booking failed: " + e.getMessage(), e);
+			/*
+			 * } finally { // Clean up thread-local EntityManager EntityManager currentEm =
+			 * threadLocalEm.get(); if (currentEm != null && currentEm.isOpen()) {
+			 * currentEm.close(); } threadLocalEm.remove();
+			 */
         }
     }
     
