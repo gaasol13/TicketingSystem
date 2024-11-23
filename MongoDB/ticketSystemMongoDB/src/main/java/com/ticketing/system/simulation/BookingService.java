@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoCollection;
 import com.poortoys.examples.dao.BookingDAO;
 import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
@@ -27,6 +30,7 @@ public class BookingService {
 	    // Metrics
 	    private AtomicInteger successfulBookings = new AtomicInteger(0);
 	    private AtomicInteger failedBookings = new AtomicInteger(0);
+	    private AtomicInteger dynamicFieldUpdates = new AtomicInteger(0);   
 	
 	private final BookingDAO bookingDAO;
     private final TicketDAO ticketDAO;
@@ -181,7 +185,45 @@ public class BookingService {
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
     }
+    /**
+     * POSITIVE SCENARIO: Demonstrates MongoDB's flexible document structure
+     * by handling dynamic ticket categories and pricing.
+     */
+    public boolean createDynamicTicket(ObjectId eventId, Map<String, Object> dynamicFields) {
+        try {
+            long startTime = System.nanoTime(); // Record start time
 
+            // Create a base ticket document with fixed fields
+            Document ticketDoc = new Document()
+                .append("eventId", eventId)
+                .append("status", "AVAILABLE")
+                .append("created", new Date());
+
+            // Dynamically add custom fields to the ticket document
+            dynamicFields.forEach((key, value) -> {
+                ticketDoc.append(key, value);
+                dynamicFieldUpdates.incrementAndGet(); // Increment dynamic field updates counter
+            });
+
+            // Obtain the "tickets" collection directly from the datastore
+            MongoCollection<Document> collection = datastore.getDatabase().getCollection("tickets");
+
+            // Insert the ticket document into the collection
+            collection.insertOne(ticketDoc);
+
+            long endTime = System.currentTimeMillis(); // Record end time
+            totalQueryTime += (endTime - startTime) * 1_000_000; // Convert ms to ns
+            totalQueries++;
+
+            System.out.println("Successfully created dynamic ticket with " +
+                dynamicFields.size() + " custom fields");
+            System.out.println("Operation time: " + (endTime - startTime) + "ms");
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to create dynamic ticket: " + e.getMessage());
+            return false;
+        }
+    }
     /**
      * Retrieves the email of a user by their ID.
      */
@@ -214,12 +256,16 @@ public class BookingService {
     public int getFailedBookings() {
         return failedBookings.get();
     }
-    
+
     public double getAverageQueryTime() {
-        return totalQueries > 0 ? (double)totalQueryTime / totalQueries / 1_000_000 : 0; // Convert to milliseconds
+        return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0; // ms
     }
 
     public int getTotalQueries() {
         return totalQueries;
+    }
+
+    public int getDynamicFieldUpdates() {
+        return dynamicFieldUpdates.get();
     }
 }
