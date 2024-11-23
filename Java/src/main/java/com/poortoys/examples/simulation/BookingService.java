@@ -1,132 +1,159 @@
-package com.poortoys.examples.simulation; // hope I spelled that right
+package com.poortoys.examples.simulation; // This declares the package name, kind of like the folder where this class lives
 
-import java.math.BigDecimal;
+// Import statements to bring in necessary classes and interfaces
+import java.math.BigDecimal; // For precise decimal calculations, especially with money
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicInteger; // For thread-safe integer operations
 
-import javax.persistence.EntityManager;
+import javax.persistence.EntityManager; // Manages the persistence context (entities)
 import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.LockModeType;
-import javax.persistence.NoResultException;
-import javax.persistence.PessimisticLockException;
+import javax.persistence.EntityTransaction; // For handling transactions
+import javax.persistence.LockModeType; // For specifying locking strategies
+import javax.persistence.NoResultException; // Exception when a query returns no results
+import javax.persistence.PessimisticLockException; // Exception when a pessimistic lock fails
 
-import com.poortoys.examples.dao.*; // importing all DAOs
-import com.poortoys.examples.entities.*; // importing all entities
+import com.poortoys.examples.dao.*; // Importing all Data Access Objects (DAOs)
+import com.poortoys.examples.entities.*; // Importing all entity classes
 
 /**
- * service class handling ticket booking operations using JPA/MySQL
- * demonstrates MySQL's approach to:
- * 1. transaction management in concurrent scenarios
- * 2. relational data handling with foreign keys
- * 3. pessimistic locking for handling race conditions
+ * Service class handling ticket booking operations using JPA/MySQL.
+ * Demonstrates MySQL's approach to:
+ * 1. Transaction management in concurrent scenarios
+ * 2. Relational data handling with foreign keys
+ * 3. Pessimistic locking for handling race conditions
  */
 public class BookingService {
     // DAOs for data access, I think this is the best way
-    private final EntityManager em; // entity manager for managing entities and transactions
-    private final UserDAO userDAO; // dao for user-related database operations
-    private final TicketDAO ticketDAO; // dao for ticket-related database operations
-    private final BookingDAO bookingDAO; // dao for booking-related database operations
-    private final BookingTicketDAO bookingTicketDAO; // dao for booking-ticket relationship operations
-    private final EventDAO eventDAO; // dao for event-related database operations
+    private final EntityManager em; // Manages entities and handles transactions
+    private final UserDAO userDAO; // DAO for user-related database operations
+    private final TicketDAO ticketDAO; // DAO for ticket-related database operations
+    private final BookingDAO bookingDAO; // DAO for booking-related database operations
+    private final BookingTicketDAO bookingTicketDAO; // DAO for booking-ticket relationship operations
+    private final EventDAO eventDAO; // DAO for event-related database operations
     
-    // counters for monitoring concurrent operations
-    private final AtomicInteger successfulBookings = new AtomicInteger(0); // successful bookings counter
-    private final AtomicInteger failedBookings = new AtomicInteger(0); // failed bookings counter
+    // Counters for monitoring concurrent operations
+    private final AtomicInteger successfulBookings = new AtomicInteger(0); // Counts successful bookings
+    private final AtomicInteger failedBookings = new AtomicInteger(0); // Counts failed bookings
     
     /**
-     * constructor for BookingService
-     * initializes the EntityManager and DAOs required for booking operations
+     * Constructor for BookingService.
+     * Initializes the EntityManager and DAOs required for booking operations.
+     * 
+     * @param em                 EntityManager for managing entities and transactions
+     * @param userDAO            DAO for user-related operations
+     * @param ticketDAO          DAO for ticket-related operations
+     * @param bookingDAO         DAO for booking-related operations
+     * @param bookingTicketDAO   DAO for booking-ticket relationship operations
+     * @param eventDAO           DAO for event-related operations
      */
-    
-   //private final ThreadLocal<EntityManager> threadLocalEm = new ThreadLocal<>();
-    
     public BookingService(EntityManager em, UserDAO userDAO, TicketDAO ticketDAO, 
                           BookingDAO bookingDAO, BookingTicketDAO bookingTicketDAO, EventDAO eventDAO) {
-        this.em = em;
-        this.userDAO = userDAO;
-        this.ticketDAO = ticketDAO;
-        this.bookingDAO = bookingDAO;
-        this.bookingTicketDAO = bookingTicketDAO;
-        this.eventDAO = eventDAO;
-        
- 
+        this.em = em; // Assign the EntityManager
+        this.userDAO = userDAO; // Assign the UserDAO
+        this.ticketDAO = ticketDAO; // Assign the TicketDAO
+        this.bookingDAO = bookingDAO; // Assign the BookingDAO
+        this.bookingTicketDAO = bookingTicketDAO; // Assign the BookingTicketDAO
+        this.eventDAO = eventDAO; // Assign the EventDAO
         
         try {
+            // Verify database connection by executing a simple query
             em.createNativeQuery("SELECT 1").getSingleResult();
             System.out.println("Database connection verified in BookingService.");
         } catch (Exception e) {
+            // If the query fails, throw a RuntimeException
             throw new RuntimeException("Failed to verify database connection", e);
         }
     }
     
-	/*
-	 * private EntityManager getEntityManager() { EntityManager entityManager =
-	 * threadLocalEm.get(); if (entityManager == null || !entityManager.isOpen()) {
-	 * entityManager = emf.createEntityManager(); threadLocalEm.set(entityManager);
-	 * } return entityManager; }
-	 */
+    /*
+     * This is a commented-out method that was perhaps used for thread-local EntityManagers.
+     * Since it's commented out, it doesn't affect the current code.
+     */
+    /*
+    private final ThreadLocal<EntityManager> threadLocalEm = new ThreadLocal<>();
+    
+    private EntityManager getEntityManager() {
+        EntityManager entityManager = threadLocalEm.get();
+        if (entityManager == null || !entityManager.isOpen()) {
+            entityManager = emf.createEntityManager();
+            threadLocalEm.set(entityManager);
+        }
+        return entityManager;
+    }
+    */
+    
     /**
-     * retrieves available tickets using MySQL's query capabilities
-     * demonstrates:
+     * Retrieves available tickets using MySQL's query capabilities.
+     * Demonstrates:
      * - JPA query language for relational data
      * - MySQL's ability to filter and join tables efficiently
+     * 
+     * @param eventId ID of the event for which to get available tickets
+     * @return List of available ticket serial numbers
      */
     public List<String> getAvailableTicketSerials(int eventId) {
         try {
-            // create and execute a JPQL query to select serial numbers of available tickets for the given event
+            // Create and execute a JPQL query to select serial numbers of available tickets for the given event
             return em.createQuery(
                 "SELECT t.serialNumber FROM Ticket t " +
                 "WHERE t.event.eventId = :eventId AND t.status = :status", String.class)
-                .setParameter("eventId", eventId) // set the eventId parameter
-                .setParameter("status", TicketStatus.AVAILABLE) // set the status parameter to 'AVAILABLE'
-                .getResultList(); // retrieve the result list
+                .setParameter("eventId", eventId) // Set the eventId parameter
+                .setParameter("status", TicketStatus.AVAILABLE) // Set the status parameter to 'AVAILABLE'
+                .getResultList(); // Retrieve the result list
         } catch (Exception e) {
-            // something went wrong getting available tickets
+            // Something went wrong getting available tickets
             System.err.println("Error getting available tickets: " + e.getMessage());
-            return new ArrayList<>(); // return an empty list
+            return new ArrayList<>(); // Return an empty list to indicate failure
         }
     }
     
     /**
-     * POSITIVE SCENARIO: demonstrates MySQL's ACID compliance
-     * with pessimistic locking for concurrent bookings
+     * POSITIVE SCENARIO: Demonstrates MySQL's ACID compliance
+     * with pessimistic locking for concurrent bookings.
+     * 
+     * @param userId             ID of the user making the booking
+     * @param ticketSerialNumbers List of ticket serial numbers the user wants to book
+     * @param deliveryEmail      Email address for delivery confirmation
+     * @return                   The created Booking object
      */
     public synchronized Booking createBooking(int userId, List<String> ticketSerialNumbers, String deliveryEmail) {
-        EntityTransaction transaction = em.getTransaction();
-        List<Ticket> lockedTickets = new ArrayList<>();
+        EntityTransaction transaction = em.getTransaction(); // Get the transaction object
+        List<Ticket> lockedTickets = new ArrayList<>(); // List to keep track of locked tickets
         
         try {
-        	 transaction.begin();
-             
-             // Get user with fresh EntityManager
-             User user = em.find(User.class, userId);
-             if (user == null) {
-                 throw new RuntimeException("User not found: " + userId);
-             }
-
-            BigDecimal totalPrice = BigDecimal.ZERO;
+            transaction.begin(); // Start the transaction
             
-            // Lock and validate tickets
+            // Get the user from the database using their ID
+            User user = em.find(User.class, userId);
+            if (user == null) {
+                // If user not found, throw an exception
+                throw new RuntimeException("User not found: " + userId);
+            }
+
+            BigDecimal totalPrice = BigDecimal.ZERO; // Initialize total price to zero
+            
+            // Lock and validate each ticket
             for (String serial : ticketSerialNumbers) {
                 try {
                     System.out.println("Attempting to lock ticket: " + serial);
                     
-                    // Updated query to match your table structure
+                    // Query to select the ticket with the given serial number and status 'available'
                     Ticket ticket = em.createQuery(
                         "SELECT t FROM Ticket t " +
-                        "LEFT JOIN FETCH t.ticketCategory tc " +
+                        "LEFT JOIN FETCH t.ticketCategory tc " + // Fetch the associated ticket category
                         "WHERE t.serialNumber = :serial AND t.status = 'available'",
                         Ticket.class)
-                        .setParameter("serial", serial)
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                        .setHint("javax.persistence.lock.timeout", 5000)
-                        .getSingleResult();
+                        .setParameter("serial", serial) // Set the serial number parameter
+                        .setLockMode(LockModeType.PESSIMISTIC_WRITE) // Apply a pessimistic write lock
+                        .setHint("javax.persistence.lock.timeout", 5000) // Set lock timeout to 5 seconds
+                        .getSingleResult(); // Execute the query and get the single result
                     
+                    // Get the ticket category (e.g., VIP, General Admission)
                     TicketCategory category = ticket.getTicketCategory();
                     if (category == null) {
+                        // If no category is assigned, throw an exception
                         throw new RuntimeException("Ticket " + serial + " has no category assigned");
                     }
                     
@@ -134,15 +161,21 @@ public class BookingService {
                                      ", Area: " + category.getArea() + 
                                      ", Price: " + category.getPrice());
                     
+                    // Update the ticket status to 'RESERVED'
                     ticket.setStatus(TicketStatus.RESERVED);  // Match your enum/string status
+                    // Add the ticket price to the total price
                     totalPrice = totalPrice.add(category.getPrice());
+                    // Add the ticket to the list of locked tickets
                     lockedTickets.add(ticket);
+                    // Merge the changes to the ticket entity
                     em.merge(ticket);
                     
                 } catch (NoResultException e) {
+                    // If no ticket is found, print error and throw an exception
                     System.err.println("Failed to find available ticket: " + serial);
                     throw new RuntimeException("Ticket not available: " + serial);
                 } catch (PessimisticLockException e) {
+                    // If locking fails, print error and throw an exception
                     System.err.println("Failed to lock ticket: " + serial);
                     throw new RuntimeException("Concurrent access detected for ticket: " + serial);
                 }
@@ -150,138 +183,157 @@ public class BookingService {
 
             System.out.println("All tickets locked. Creating booking with total price: " + totalPrice);
 
-            // Create booking first
+            // Create a new Booking object
             Booking booking = new Booking();
-            booking.setUser(user);
-            booking.setDeliveryAddressEmail(deliveryEmail);
-            booking.setBookingTime(new Date());
-            booking.setTotalPrice(totalPrice);
-            booking.setDiscount(BigDecimal.ZERO);
-            booking.setFinalPrice(totalPrice);
-            booking.setBookingStatus(BookingStatus.CONFIRMED);
+            booking.setUser(user); // Set the user who made the booking
+            booking.setDeliveryAddressEmail(deliveryEmail); // Set the delivery email
+            booking.setBookingTime(new Date()); // Set the booking time to now
+            booking.setTotalPrice(totalPrice); // Set the total price
+            booking.setDiscount(BigDecimal.ZERO); // Assume no discount
+            booking.setFinalPrice(totalPrice); // Final price after discount
+            booking.setBookingStatus(BookingStatus.CONFIRMED); // Set booking status to 'CONFIRMED'
             
-            em.persist(booking);
-            em.flush(); // Ensure booking is persisted first
+            em.persist(booking); // Persist the booking entity
+            em.flush(); // Force synchronization with the database to get the booking ID
 
-            // Then create BookingTicket associations
+            // Create associations between the booking and each ticket
             for (Ticket ticket : lockedTickets) {
                 BookingTicket bookingTicket = new BookingTicket();
-                bookingTicket.setBooking(booking);
-                bookingTicket.setTicket(ticket);
-                em.persist(bookingTicket); // Persist each BookingTicket
+                bookingTicket.setBooking(booking); // Set the booking
+                bookingTicket.setTicket(ticket); // Set the ticket
+                em.persist(bookingTicket); // Persist the BookingTicket entity
                 
+                // Update the ticket status to 'SOLD' and set the purchase date
                 ticket.setStatus(TicketStatus.SOLD);
                 ticket.setPurchaseDate(new Date());
-                em.merge(ticket);
+                em.merge(ticket); // Merge changes to the ticket entity
             }
 
-            em.flush();
-            transaction.commit();
+            em.flush(); // Ensure all changes are flushed to the database
+            transaction.commit(); // Commit the transaction
             System.out.println("Transaction committed successfully");
             
-            successfulBookings.incrementAndGet();
-            return booking;
+            successfulBookings.incrementAndGet(); // Increment the successful bookings counter
+            return booking; // Return the created booking
 
         } catch (Exception e) {
+            // If any exception occurs, roll back the transaction
             if (transaction != null && transaction.isActive()) {
                 transaction.rollback();
             }
+            // Rethrow the exception with a descriptive message
             throw new RuntimeException("Booking failed: " + e.getMessage(), e);
-			/*
-			 * } finally { // Clean up thread-local EntityManager EntityManager currentEm =
-			 * threadLocalEm.get(); if (currentEm != null && currentEm.isOpen()) {
-			 * currentEm.close(); } threadLocalEm.remove();
-			 */
         }
     }
     
     /**
-     * this method changes the database structure
-     * can add or remove columns from tables
+     * This method changes the database structure.
+     * It can add or remove columns from tables.
+     * 
+     * @param operation The operation to perform ('drop_user_columns' or 'add_user_columns')
+     * @return          Time taken to perform the operation in milliseconds
      */
     public long modifySchema(String operation) {
-        EntityTransaction transaction = em.getTransaction();
-        long startTime = System.currentTimeMillis();
+        EntityTransaction transaction = em.getTransaction(); // Get the transaction object
+        long startTime = System.currentTimeMillis(); // Record the start time
 
         try {
-            transaction.begin();
+            transaction.begin(); // Start the transaction
             System.out.println("Starting schema modification: " + operation);
 
-            String sql;
+            String sql; // Variable to hold the SQL command
             switch (operation.toLowerCase()) {
                 case "drop_user_columns":
-                    // drop confirmation columns
+                    // SQL to drop confirmation columns from the 'users' table
                     sql = "ALTER TABLE users DROP COLUMN confirmation_code, DROP COLUMN confirmation_time";
                     break;
                 case "add_user_columns":
-                    // add confirmation columns back
+                    // SQL to add confirmation columns back to the 'users' table
                     sql = "ALTER TABLE users ADD COLUMN confirmation_code VARCHAR(100), ADD COLUMN confirmation_time DATETIME";
                     break;
                 default:
-                    // unknown operation, can't proceed
+                    // If the operation is unknown, throw an exception
                     throw new IllegalArgumentException("Unknown operation: " + operation);
             }
 
             System.out.println("Executing SQL: " + sql);
-            em.createNativeQuery(sql).executeUpdate();
+            em.createNativeQuery(sql).executeUpdate(); // Execute the SQL command
 
-            transaction.commit();
+            transaction.commit(); // Commit the transaction
             
-            long timeTaken = System.currentTimeMillis() - startTime;
+            long timeTaken = System.currentTimeMillis() - startTime; // Calculate time taken
             System.out.println("Schema modification completed in " + timeTaken + "ms");
-            return timeTaken;
+            return timeTaken; // Return the time taken
 
         } catch (Exception e) {
+            // If an exception occurs, print an error message
             System.err.println("Schema modification failed: " + e.getMessage());
             
+            // Attempt to roll back the transaction if it's active
             if (transaction.isActive()) {
                 try {
                     System.out.println("Rolling back changes...");
                     transaction.rollback();
                 } catch (Exception rollbackError) {
+                    // If rollback fails, print an error message
                     System.err.println("Rollback failed: " + rollbackError.getMessage());
                 }
             }
             
-            // could not modify schema, rethrow exception
+            // Rethrow the exception
             throw new RuntimeException("Could not modify schema: " + e.getMessage(), e);
         }
     }
 
-    //  can also create specific methods for each operation if you prefer
+    // Convenience methods to perform specific schema modifications
+    /**
+     * Drops specific columns from the 'users' table.
+     * 
+     * @return Time taken to perform the operation in milliseconds
+     */
     public long dropUserColumns() {
         return modifySchema("drop_user_columns");
     }
 
+    /**
+     * Adds specific columns back to the 'users' table.
+     * 
+     * @return Time taken to perform the operation in milliseconds
+     */
     public long addUserColumns() {
         return modifySchema("add_user_columns");
     }
 
     /**
-     *  method to calculate the total price of booked tickets
+     * Method to calculate the total price of booked tickets.
+     * 
+     * @param tickets List of tickets
+     * @return        Total price as BigDecimal
      */
     private BigDecimal calculateTotalPrice(List<Ticket> tickets) {
-        // sum the prices of all tickets
+        // Sum the prices of all tickets
         return tickets.stream()
-            .map(Ticket::getPrice) // get price of each ticket
-            .reduce(BigDecimal.ZERO, BigDecimal::add); // sum them up
+            .map(Ticket::getPrice) // Get the price of each ticket
+            .reduce(BigDecimal.ZERO, BigDecimal::add); // Sum them up starting from zero
     }
     
-    // getter methods for metrics
+    // Getter methods for metrics
     
     /**
-     * retrieves the total number of successful bookings
+     * Retrieves the total number of successful bookings.
+     * 
+     * @return Number of successful bookings
      */
     public int getSuccessfulBookings() {
-        return successfulBookings.get(); // get the value
+        return successfulBookings.get(); // Get the current value atomically
     }
 
     /**
-     * retrieves the total number of failed bookings
+     * Retrieves the total number of failed bookings.
      * 
-     * @return number of failed bookings
+     * @return Number of failed bookings
      */
     public int getFailedBookings() {
-        return failedBookings.get(); // get the value
+        return failedBookings.get(); // Get the current value atomically
     }
 }
