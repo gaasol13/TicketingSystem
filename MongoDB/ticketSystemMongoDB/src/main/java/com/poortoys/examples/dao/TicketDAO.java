@@ -43,14 +43,15 @@ public class TicketDAO {
 	    }
 
 	    // Find all available tickets for a specific event
-	    public List<Ticket> findAvailableTicketsByEventId(ObjectId eventId) {
+	 // Add this method to your TicketDAO class
+	    public List<Ticket> findAvailableTickets(ObjectId eventId) {
 	        return datastore.find(Ticket.class)
-	                .filter(
-	                        Filters.eq("event_id", eventId),
-	                        Filters.eq("status", "available")
-	                )
-	                .iterator()
-	                .toList();
+	            .filter(Filters.and(
+	                Filters.eq("event_id", eventId),
+	                Filters.eq("status", "AVAILABLE")
+	            ))
+	            .iterator()
+	            .toList();
 	    }
 	    
 	    // Find tickets by their IDs
@@ -158,23 +159,29 @@ public class TicketDAO {
 	    }
 	    
 	    public Ticket findAndModifyTicket(ClientSession session, ObjectId ticketId, String status) {
-	        Query<Ticket> query = datastore.find(Ticket.class)
-	            .filter(Filters.and(
-	                Filters.eq("_id", ticketId),
-	                Filters.eq("status", "available")
-	            ));
-	        
-	        UpdateOperator updateOperator = UpdateOperators.addToSet("status", status);
-	         query.update(new ModifyOptions()
-	            .returnDocument(ReturnDocument.AFTER)
-	            .upsert(false))
-	            .execute();
-	    }
+	        try {
+	            // Create query to find available ticket by ID
+	            Query<Ticket> query = datastore.find(Ticket.class)
+	                .filter(Filters.and(
+	                    Filters.eq("_id", ticketId),
+	                    Filters.eq("status", "AVAILABLE")
+	                ));
 
-		public void update(Ticket ticket) {
-			datastore.save(ticket);
-			
-		}
+	            // Create update operation to set the new status
+	            UpdateOperator updateOperator = UpdateOperators.set("status", status);
+
+	            // Execute findAndModify operation
+	            return query.modify(new FindAndModifyOptions()
+	                .returnDocument(ReturnDocument.AFTER)
+	                .upsert(false))
+	                .update(updateOperator)
+	                .execute();
+
+	        } catch (Exception e) {
+	            System.err.println("Error in findAndModifyTicket: " + e.getMessage());
+	            return null;
+	        }
+	    }
 
 		
 

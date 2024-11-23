@@ -36,17 +36,13 @@ public class BookingService {
     // Counters for monitoring concurrent operations
     private final AtomicInteger successfulBookings = new AtomicInteger(0); // Counts successful bookings
     private final AtomicInteger failedBookings = new AtomicInteger(0); // Counts failed bookings
-    
+    // Add these fields
+    private long totalQueryTime = 0;
+    private int totalQueries = 0;
+
     /**
      * Constructor for BookingService.
      * Initializes the EntityManager and DAOs required for booking operations.
-     * 
-     * @param em                 EntityManager for managing entities and transactions
-     * @param userDAO            DAO for user-related operations
-     * @param ticketDAO          DAO for ticket-related operations
-     * @param bookingDAO         DAO for booking-related operations
-     * @param bookingTicketDAO   DAO for booking-ticket relationship operations
-     * @param eventDAO           DAO for event-related operations
      */
     public BookingService(EntityManager em, UserDAO userDAO, TicketDAO ticketDAO, 
                           BookingDAO bookingDAO, BookingTicketDAO bookingTicketDAO, EventDAO eventDAO) {
@@ -112,15 +108,11 @@ public class BookingService {
     /**
      * POSITIVE SCENARIO: Demonstrates MySQL's ACID compliance
      * with pessimistic locking for concurrent bookings.
-     * 
-     * @param userId             ID of the user making the booking
-     * @param ticketSerialNumbers List of ticket serial numbers the user wants to book
-     * @param deliveryEmail      Email address for delivery confirmation
-     * @return                   The created Booking object
      */
     public synchronized Booking createBooking(int userId, List<String> ticketSerialNumbers, String deliveryEmail) {
         EntityTransaction transaction = em.getTransaction(); // Get the transaction object
         List<Ticket> lockedTickets = new ArrayList<>(); // List to keep track of locked tickets
+        long queryStartTime = System.nanoTime();
         
         try {
             transaction.begin(); // Start the transaction
@@ -208,6 +200,8 @@ public class BookingService {
                 ticket.setPurchaseDate(new Date());
                 em.merge(ticket); // Merge changes to the ticket entity
             }
+            
+            
 
             em.flush(); // Ensure all changes are flushed to the database
             transaction.commit(); // Commit the transaction
@@ -224,6 +218,7 @@ public class BookingService {
             // Rethrow the exception with a descriptive message
             throw new RuntimeException("Booking failed: " + e.getMessage(), e);
         }
+        
     }
     
     /**
@@ -245,7 +240,7 @@ public class BookingService {
             switch (operation.toLowerCase()) {
                 case "drop_user_columns":
                     // SQL to drop confirmation columns from the 'users' table
-                    sql = "ALTER TABLE users DROP COLUMN confirmation_code, DROP COLUMN confirmation_time";
+                    sql = "ALTER TABLE users ADD COLUMN confirmation_code, DROP COLUMN confirmation_time";
                     break;
                 case "add_user_columns":
                     // SQL to add confirmation columns back to the 'users' table

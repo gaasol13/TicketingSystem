@@ -6,8 +6,6 @@ import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.initializer.DataInitializer;
-import com.ticketing.system.entities.Event;
-import com.ticketing.system.simulation.BookingService;
 import com.ticketing.system.simulation.BookingSimulation;
 
 import dev.morphia.Datastore;
@@ -17,64 +15,45 @@ import org.bson.types.ObjectId;
 
 public class AppMain {
 
-	public static void main(String[] args) {
-        // Create an instance of DataInitializer
-        DataInitializer dataInitializer = new DataInitializer();
+    public static void main(String[] args) {
+    	
+    	//Create an instance of DataInitializer
+    	DataInitializer dataInitializer = new DataInitializer();
+    	
+    	//dataInitializer.populateData();
+        Datastore datastore = dataInitializer.getDatastore();
+        BookingDAO bookingDAO = dataInitializer.getBookingDAO();
+        UserDAO userDAO = dataInitializer.getUserDAO();
+        EventDAO eventDAO = dataInitializer.getEventDAO();
+        TicketDAO ticketDAO = dataInitializer.getTicketDAO();
 
-        try {
-            // Get necessary DAOs and Datastore
-            Datastore datastore = dataInitializer.getDatastore();
-            BookingDAO bookingDAO = dataInitializer.getBookingDAO();
-            UserDAO userDAO = dataInitializer.getUserDAO();
-            EventDAO eventDAO = dataInitializer.getEventDAO();
-            TicketDAO ticketDAO = dataInitializer.getTicketDAO();
+        // Specify the event for which to run the simulation
+        // Replace with the actual event ID you want to test
+        ObjectId eventId = new ObjectId("673133acaa85ed04a55c96a1");
 
-            //Specify the event ID for simulation
-            ObjectId eventId = new ObjectId("673133acaa85ed04a55c969d");
-            
-            //Verify event exists
-            Event event = eventDAO.findById(eventId);
-            if (event == null) {
-                System.err.println("Error: Event not found with ID: " + eventId);
-                return;
-            }
-            
-            System.out.println("Starting simulation for event: " + event.getName());
+        // Parameters for simulation
+        int numberOfUsers = 100; // Simulate 1000 users
+        int maxTicketsPerUser = 4; // Each user can book up to 4 tickets
 
-            // Simulation parameters
-            int numberOfUsers = 5;        // Number of concurrent users
-            int maxTicketsPerUser = 4;    // Maximum tickets per booking
+        BookingSimulation simulation = new BookingSimulation(datastore, bookingDAO, userDAO, eventDAO, ticketDAO);
+        simulation.runSimulation(eventId);
 
-            // Create and run simulation
-            BookingSimulation simulation = new BookingSimulation(
-                datastore, 
-                bookingDAO, 
-                userDAO, 
-                eventDAO, 
-                ticketDAO
-            );
-
-            // Run both positive and negative scenarios
-            System.out.println("\nRunning MongoDB Scenarios Simulation");
-            System.out.println("====================================");
-            System.out.println("Parameters:");
-            System.out.println("- Concurrent Users: " + numberOfUsers);
-            System.out.println("- Max Tickets Per User: " + maxTicketsPerUser);
-            System.out.println("- Event: " + event.getName());
-            System.out.println("====================================\n");
-
-            simulation.runSimulation(eventId, numberOfUsers, maxTicketsPerUser);
-
-        } catch (Exception e) {
-            System.err.println("Simulation failed: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            // Ensure proper cleanup
-            if (dataInitializer != null) {
-                System.out.println("\nCleaning up resources...");
-                dataInitializer.close();
-                System.out.println("MongoDB connection closed");
-            }
-        }
+        // Close the DataInitializer
+        dataInitializer.close();
+		
+		/*
+		 * try { // Directly retrieve the collection from MongoDBConnection
+		 * MongoCollection<Document> collection = MongoDBConnection.getCollection();
+		 * System.out.println("Welcome to Collection: " + collection);
+		 * 
+		 * // Verify the connection by counting documents long count =
+		 * collection.countDocuments();
+		 * System.out.println("Number of documents in the collection: " + count);
+		 * 
+		 * } catch (Exception e) { System.err.println("Error: " + e.getMessage());
+		 * e.printStackTrace(); } finally { // Ensure the MongoDB client closes properly
+		 * MongoDBConnection.close(); }
+		 */
+		 
     }
 }

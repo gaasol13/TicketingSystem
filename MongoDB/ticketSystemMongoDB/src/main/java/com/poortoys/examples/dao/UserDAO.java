@@ -1,6 +1,7 @@
 package com.poortoys.examples.dao;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.bson.types.ObjectId;
 import dev.morphia.query.experimental.filters.Filters;
@@ -35,9 +36,10 @@ public class UserDAO {
 	}
 	
 	//find all
-	public List<User> findAll(){
-		return datastore.find(User.class).iterator().toList();
+	public List<User> findAll() {
+	    return datastore.find(User.class).stream().collect(Collectors.toList());
 	}
+
 	
 	//create a new userName
 	public void create(User user) {
