@@ -1,233 +1,147 @@
 package com.ticketing.system.simulation;
 
-// necessary imports for the simulation functionality
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.poortoys.examples.dao.BookingDAO;
 import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
-import com.ticketing.system.entities.Event;
+import com.poortoys.examples.initializer.DataInitializer;
 import com.ticketing.system.entities.User;
 
 import dev.morphia.Datastore;
 
-/**
- * class responsible for simulating the booking process in the ticketing system.
- * it tests both positive and negative scenarios to evaluate MongoDB's capabilities
- * in handling dynamic documents and concurrent operations.
- */
 public class BookingSimulation {
-    // Standardized test parameters
-    private static final int NUM_USERS = 5;                      // number of users to simulate
-    private static final int MAX_TICKETS_PER_USER = 4;           // Maximum number of tickets a user can book
-    private static final int THREAD_POOL_SIZE = 5;               // Number of threads in the thread pool
-    private static final String DATABASE_TYPE = "MongoDB";       // type of database used (for informational purposes)
+	
+	  // Standardized configuration
+    protected static final int NUM_USERS = 100;               
+    protected static final int MAX_TICKETS_PER_USER = 2;      
+    protected static final int THREAD_POOL_SIZE = 10;         
+    protected static final int SIMULATION_TIMEOUT_MINUTES = 5; 
+    protected static final int BATCH_SIZE = 100;
+    
+    // Standardized metrics across both implementations
+    protected long simulationStartTime;
+    protected long simulationEndTime;
+    protected long totalQueryTime = 0;
+    protected int totalQueries = 0;
 
-    // Dependencies for the simulation
-    private final BookingService bookingService;                  // service handling booking operations
-    private final UserDAO userDAO;                                // dao for user-related database operations
-    private final EventDAO eventDAO;                              // DAO for event-related database operations
-    private final TicketDAO ticketDAO;                            // DAO for ticket-related database operations
-    private final Datastore datastore;                            // Morphia Datastore for MongoDB interactions
-    private final ExecutorService executorService;                // executorService for managing concurrent tasks
+	     private final BookingService bookingService;
+	     private final UserDAO userDAO;
+	     private final EventDAO eventDAO;
+	     private final TicketDAO ticketDAO;
+	     private final BookingDAO bookingDAO;
+	     private final Datastore datastore;
 
-    // Atomic counters for tracking simulation metrics in a thread-safe manner
-    private final AtomicInteger totalAttempts = new AtomicInteger(0);          // total number of booking attempts
-    private final AtomicInteger successfulBookings = new AtomicInteger(0);     // number of successful bookings
-    private final AtomicInteger failedBookings = new AtomicInteger(0);         // Number of failed bookings
-    private final AtomicInteger concurrencyConflicts = new AtomicInteger(0);   // Number of concurrency conflicts encountered
-    private final AtomicInteger dynamicFieldUpdates = new AtomicInteger(0);    // Number of dynamic field updates performed
+	     public BookingSimulation(Datastore datastore, BookingDAO bookingDAO, UserDAO userDAO, EventDAO eventDAO, TicketDAO ticketDAO) {
+	         this.datastore = datastore;
+	         this.bookingDAO = bookingDAO;
+	         this.userDAO = userDAO;
+	         this.eventDAO = eventDAO;
+	         this.ticketDAO = ticketDAO;
+	         this.bookingService = new BookingService(bookingDAO, ticketDAO, userDAO, eventDAO, datastore);
+	     }
 
-    /**
-     * constructor for BookingSimulation.
-     * initializes the required DAOs, BookingService, and ExecutorService.
-     */
-    public BookingSimulation(Datastore datastore, BookingDAO bookingDAO,
-                             UserDAO userDAO, EventDAO eventDAO, TicketDAO ticketDAO) {
-        this.datastore = datastore;
-        this.userDAO = userDAO;
-        this.eventDAO = eventDAO;
-        this.ticketDAO = ticketDAO;
-        this.bookingService = new BookingService(bookingDAO, ticketDAO, userDAO, eventDAO, datastore);
-        this.executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Initialize a fixed thread pool
-    }
+	     /**
+	      * Runs the booking simulation.
+	      */
+	     public void runSimulation(ObjectId eventId) {
+	         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+	         List<Callable<Boolean>> tasks = new ArrayList<>();
 
-    /**
-     * runs the booking simulation for a specific event.
-     * it tests both positive and negative scenarios to evaluate MongoDB's capabilities
-     * in handling dynamic documents and concurrent operations.
-     */
-    public void runSimulation(ObjectId eventId, int numUsers, int maxTicketsPerUser) {
-        try {
-            // retrieve the event details from the database
-            Event event = eventDAO.findById(eventId);
-            if (event == null) {
-                throw new RuntimeException("Event not found: " + eventId);
-            }
+	         // Retrieve all users to simulate booking attempts
+	         List<User> users = userDAO.findAll();
 
-            // Print simulation start information
-            System.out.println("\n=== Starting MongoDB Simulation ===");
-            System.out.println("Event: " + event.getName());
-            System.out.println("Initial ticket count: " + ticketDAO.countAvailableTickets(eventId));
+	         // If not enough users, notify and exit
+	         if (users.size() < NUM_USERS) {
+	             System.out.println("Not enough users in the system. Please add more users for the simulation.");
+	             executor.shutdown();
+	             return;
+	         }
 
-            // Run the positive scenario to test dynamic ticket creation
-            runDynamicTicketScenario(eventId);
+	         Random random = new Random();
 
-            // Run the negative scenario to test concurrency handling during bookings
-            runConcurrentBookingScenario(eventId, numUsers, maxTicketsPerUser);
+	         // Start simulation timing
+	         simulationStartTime = System.nanoTime();
 
-            // Print the final results of the simulation
-            printResults(eventId, event.getName());
-        } catch (Exception e) {
-            // handle any exceptions that occur during the simulation
-            System.err.println("Simulation failed: " + e.getMessage());
-        } finally {
-            // ensure that resources are properly shut down after the simulation
-            shutdown();
-        }
-    }
+	         for (int i = 0; i < NUM_USERS; i++) {
+	             final User user = users.get(random.nextInt(users.size()));
+	             final int ticketsToBook = random.nextInt(MAX_TICKETS_PER_USER) + 1; // 1 to MAX_TICKETS_PER_USER
 
-    /**
-     * runs the positive scenario of the simulation, which tests the creation of tickets
-     * with dynamic fields to evaluate MongoDB's schema flexibility.
-     */
-    private void runDynamicTicketScenario(ObjectId eventId) {
-        long startTime = System.currentTimeMillis(); // record the start time of the operation
+	             Callable<Boolean> task = () -> bookingService.bookTickets(user.getId(), eventId, ticketsToBook);
 
-        try {
-            // define dynamic fields to be added to the ticket
-            Map<String, Object> dynamicFields = new HashMap<>();
-            dynamicFields.put("vipAccess", true); // indicates if VIP access is included
-            dynamicFields.put("merchandiseIncluded", Arrays.asList("t-shirt", "poster")); // list of merchandise items included
-            dynamicFields.put("specialOffer", new Document()
-                .append("discount", 20)               // discount percentage
-                .append("validUntil", new Date()));    // expiration date of the offer
+	             tasks.add(task);
+	         }
 
-            // attempt to create a dynamic ticket using the BookingService
-            boolean success = bookingService.createDynamicTicket(eventId, dynamicFields);
+	         try {
+	             List<Future<Boolean>> results = executor.invokeAll(tasks);
 
-            // Calculate the time taken to update dynamic fields
-            System.out.println("\nDynamic Ticket Creation Results:");
-            System.out.println("- Status: " + (success ? "Successful" : "Failed"));
-            System.out.println("- Processing time: " + (System.currentTimeMillis() - startTime) + "ms");
-            System.out.println("- Fields added: " + dynamicFields.size());
-        } catch (Exception e) {
-            // handle any exceptions that occur during dynamic ticket creation
-            System.err.println("Dynamic ticket scenario failed: " + e.getMessage());
-            System.out.println("- Processing time: " + (System.currentTimeMillis() - startTime) + "ms");
-        }
-    }
+	             // Wait for all tasks to complete or timeout
+	             executor.shutdown();
+	             if (!executor.awaitTermination(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
+	                 executor.shutdownNow();
+	             }
 
-    /**
-     * runs the negative scenario of the simulation, which tests concurrent bookings
-     * to evaluate MongoDB's handling of concurrency and atomic operations.
-     */
-    private void runConcurrentBookingScenario(ObjectId eventId, int numUsers, int maxTicketsPerUser) {
-        // retrieve all users from the database
-        List<User> users = userDAO.findAll();
-        if (users.size() < numUsers) {
-            System.out.println("Warning: Only " + users.size() + " users available for simulation");
-            numUsers = users.size(); // adjust the number of users if not enough are available
-        }
+	             // End simulation timing
+	             simulationEndTime = System.nanoTime();
 
-        List<Callable<Boolean>> tasks = new ArrayList<>(); // list to hold booking tasks
-        Random random = new Random(); // random number generator for selecting users and tickets
+	             // Collect metrics
+	             int successfulBookings = bookingService.getSuccessfulBookings();
+	             int failedBookings = bookingService.getFailedBookings();
 
-        for (int i = 0; i < numUsers; i++) {
-            User user = users.get(random.nextInt(users.size())); // randomly select a user
-            int ticketsToBook = random.nextInt(maxTicketsPerUser) + 1; // randomly decide how many tickets to book (1 to max)
+	             // Get initial ticket count
+	             long initialTicketCount = ticketDAO.countAvailableTickets(eventId);
 
-            // create a booking task for the selected user and number of tickets
-            tasks.add(() -> {
-                totalAttempts.incrementAndGet(); // increment the total booking attempts
-                long startTime = System.currentTimeMillis(); // record the start time of the booking attempt
+	             // Get remaining tickets
+	             long remainingTickets = ticketDAO.countAvailableTickets(eventId);
 
-                // attempt to book tickets using the BookingService
-                boolean success = bookingService.bookTickets(user.getId(), eventId, ticketsToBook);
+	             // Print final metrics
+	             printFinalMetrics(eventId, initialTicketCount, successfulBookings, failedBookings, remainingTickets);
 
-                // update the booking counters based on the result
-                if (success) {
-                    successfulBookings.incrementAndGet(); // increment successful bookings if the booking was successful
-                } else {
-                    failedBookings.incrementAndGet(); // increment failed bookings if the booking failed
-                }
+	         } catch (InterruptedException e) {
+	             System.err.println("Simulation interrupted: " + e.getMessage());
+	             Thread.currentThread().interrupt();
+	         }
+	     }
 
-                return success; // indicate whether the booking was successful
-            });
-        }
+	     /**
+	      * Prints the final metrics after the simulation.
+	      */
+	     private void printFinalMetrics(ObjectId eventId, long initialTicketCount, int successfulBookings, int failedBookings, long remainingTickets) {
+	         System.out.println("\n=== Database Simulation Results ===");
+	         System.out.println("Configuration:");
+	         System.out.println("Concurrent Users: " + NUM_USERS);
+	         System.out.println("Max Tickets Per User: " + MAX_TICKETS_PER_USER);
+	         System.out.println("Thread Pool Size: " + THREAD_POOL_SIZE);
+	         
+	         System.out.println("\nPerformance Metrics:");
+	         System.out.println("Total Simulation Time: " + 
+	             (simulationEndTime - simulationStartTime) / 1_000_000 + " ms");
+	         System.out.println("Average Query Time: " + 
+	             bookingService.getAverageQueryTime() + " ms");
+	         System.out.println("Total Queries Executed: " + 
+	             bookingService.getTotalQueries());
+	         
+	         System.out.println("\nTransaction Metrics:");
+	         System.out.println("Total Booking Attempts: " + NUM_USERS);
+	         System.out.println("Successful Bookings: " + successfulBookings);
+	         System.out.println("Failed Bookings: " + failedBookings);
+	         
+	         System.out.println("\nInventory Metrics:");
+	         System.out.println("Initial Tickets: " + initialTicketCount);
+	         System.out.println("Total Booked: " + (initialTicketCount - remainingTickets));
+	         System.out.println("Remaining Tickets: " + remainingTickets);
+	         
+	         System.out.println("===============================\n");
+	     }
 
-        try {
-            // submit all booking tasks to the executor service and wait for their completion
-            executorService.invokeAll(tasks);
-        } catch (InterruptedException e) {
-            // Handle interruptions during task execution
-            Thread.currentThread().interrupt(); // restore the interrupted status
-            System.err.println("Booking simulation interrupted: " + e.getMessage());
-        }
-    }
-
-    /**
-     * prints the results of the simulation, including metrics from both positive and
-     * negative scenarios.
-     */
-    private void printResults(ObjectId eventId, String eventName) {
-        System.out.println("\n=== MongoDB Simulation Results ===");
-        System.out.println("Event: " + eventName);
-
-        // Print results from the positive scenario
-        System.out.println("\nPOSITIVE SCENARIO Results:");
-        System.out.println("- Dynamic fields processed: " + bookingService.getDynamicFieldUpdates());
-
-        // Print results from the negative scenario
-        System.out.println("\nNEGATIVE SCENARIO Results:");
-        System.out.println("- Total booking attempts: " + totalAttempts.get());
-        System.out.println("- Successful bookings: " + successfulBookings.get());
-        System.out.println("- Failed bookings: " + failedBookings.get());
-        System.out.println("- Concurrency conflicts: " + bookingService.getConcurrencyConflicts());
-        System.out.println("- Remaining tickets: " + ticketDAO.countAvailableTickets(eventId));
-
-        // Calculate and print the concurrency conflict rate
-        double conflictRate = totalAttempts.get() > 0 
-            ? ((double) bookingService.getConcurrencyConflicts() / totalAttempts.get()) * 100 
-            : 0.0;
-        System.out.println("=======================\n");
-    }
-
-    /**
-     * shuts down the executor service gracefully, ensuring that all tasks are completed
-     * or forcefully terminated if they exceed the shutdown timeout.
-     */
-    private void shutdown() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown(); // initiate shutdown of the executor service
-            try {
-                // await termination for a specified timeout
-                if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
-                    executorService.shutdownNow(); // force shutdown if not terminated within timeout
-                    System.out.println("Forcing shutdown of executor service...");
-                }
-                System.out.println("Simulation executor service shutdown complete.");
-            } catch (InterruptedException e) {
-                // handle interruptions during shutdown
-                executorService.shutdownNow(); // force shutdown
-                Thread.currentThread().interrupt(); // restore the interrupted status
-                System.err.println("Simulation shutdown interrupted: " + e.getMessage());
-            }
-        }
-    }
 }

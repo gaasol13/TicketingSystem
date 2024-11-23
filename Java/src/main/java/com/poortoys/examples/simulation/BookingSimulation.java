@@ -21,11 +21,18 @@ import com.poortoys.examples.entities.User; // User entity class
 public class BookingSimulation {
     
     // Simulation configuration constants
-    private static final int NUM_USERS = 100;                  // Number of users we're simulating
-    private static final int MAX_TICKETS_PER_USER = 2;       // Max tickets a user can book
-    private static final int THREAD_POOL_SIZE = 5;           // Number of threads in the thread pool
-    private static final int SIMULATION_DURATION_SECONDS = 180; // How long the simulation runs
-
+    // Standardized configuration
+    protected static final int NUM_USERS = 100;               
+    protected static final int MAX_TICKETS_PER_USER = 2;      
+    protected static final int THREAD_POOL_SIZE = 10;         
+    protected static final int SIMULATION_TIMEOUT_MINUTES = 5; 
+    protected static final int BATCH_SIZE = 100;
+    
+    // Standardized metrics across both implementations
+    protected long simulationStartTime;
+    protected long simulationEndTime;
+    protected long totalQueryTime = 0;
+    protected int totalQueries = 0;
     // Dependencies for the simulation
     private final BookingService bookingService;              // Service that handles booking operations
     private final UserDAO userDAO;                            // Data access object for user-related database operations
