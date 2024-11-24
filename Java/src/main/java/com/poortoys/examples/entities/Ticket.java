@@ -17,6 +17,9 @@ public class Ticket {
 	@Column(name = "ticket_id")
 	private int ticketId;
 	
+	@Version
+    private int version;
+	
 	//Unique serial number to prevent duplication
 	@Column(name = "serial_number", unique = true, nullable = false, length = 255)
 	private String serialNumber;
