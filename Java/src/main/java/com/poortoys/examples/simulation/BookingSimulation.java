@@ -20,10 +20,10 @@ import com.poortoys.examples.entities.Booking;
 public class BookingSimulation {
 
     // Configuration Constants
-    private static final int NUM_USERS = 100;
-    private static final int MAX_TICKETS_PER_USER = 2;
+    private static final int NUM_USERS = 10;
+    private static final int MAX_TICKETS_PER_USER = 1;
     private static final int THREAD_POOL_SIZE = 10;
-    private static final int SIMULATION_TIMEOUT_MINUTES = 5;
+    private static final int SIMULATION_TIMEOUT_MINUTES = 1;
     private static final int BATCH_SIZE = 100;
 
     // Metrics fields
