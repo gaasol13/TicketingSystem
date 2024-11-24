@@ -14,7 +14,6 @@ public class AppMain {
         
         try {
             System.out.println("Starting Ticketing System Simulation...");
-            
             // Create EntityManagerFactory
             emf = Persistence.createEntityManagerFactory("ticketingsystem");
             System.out.println("EntityManagerFactory created successfully");
@@ -55,8 +54,8 @@ public class AppMain {
             System.out.println("BookingSimulation created successfully");
 
             // Run simulation
-            System.out.println("\nStarting simulation for Event ID: 10");
-            simulation.runFullSimulation(10);//Parameters: eventId ID of the event for which the simulation is run
+            System.out.println("\nStarting simulation for Event ID: 1");
+            simulation.runFullSimulation(1);//Parameters: eventId ID of the event for which the simulation is run
             
             // Keep console open
             System.out.println("\nSimulation completed. Press Enter to exit...");
@@ -95,3 +94,24 @@ public class AppMain {
         }
     }
 }
+
+
+/*
+ * I'd like to know the
+ * 
+ * 
+ * I'd like to standardize my AppMain to work with both scenarios and enhance the displayed metrics (in the simulation class) with the following information:
+
+
+Event Name: Instead of the event ID, display the actual event name.
+
+Venue: Show the venue where the event will take place.
+
+Total Tickets by Category: Display the total number of tickets available for each category of the event.
+
+Total Tickets Booked by Category: Show the number of tickets already booked for each category.
+
+Total Tickets Available: Display the total number of tickets still available across all categories.
+
+Total Ticket Categories:
+ */

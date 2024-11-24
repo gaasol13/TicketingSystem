@@ -83,7 +83,7 @@ public class DataInitializer {
 		initializers.add(new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO));
 		initializers.add(new BookingInitializer(bookingDAO, userDAO));
 	
-		initializers.add(new BookingTicketInitializer(bookingTicketDAO, bookingDAO, userDAO, ticketDAO));
+		//initializers.add(new BookingTicketInitializer(bookingTicketDAO, bookingDAO, userDAO, ticketDAO));
 
 
 	}

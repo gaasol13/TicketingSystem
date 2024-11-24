@@ -29,7 +29,7 @@ public class AppMain {
 
         // Specify the event for which to run the simulation
         // Replace with the actual event ID you want to test
-        ObjectId eventId = new ObjectId("673133acaa85ed04a55c96a5");
+        ObjectId eventId = new ObjectId("673133acaa85ed04a55c96a5"); //event 10
 
         // Parameters for simulation
         int numberOfUsers = 100; // Simulate 1000 users

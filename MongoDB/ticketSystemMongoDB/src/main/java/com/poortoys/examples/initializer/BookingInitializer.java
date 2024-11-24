@@ -84,7 +84,7 @@ public class BookingInitializer implements Initializer{
             int remainingBookingsAllowed = (int)(5 - existingBookingsCount);
 
             // Retrieve available tickets for the event
-            List<Ticket> availableTickets = ticketDAO.findAvailableTicketsByEventId(eventId);
+            List<Ticket> availableTickets = ticketDAO.findAvailableTickets(eventId);
 
             if (availableTickets.isEmpty()) {
                 System.out.println("No available tickets for user: " + userName);
