@@ -24,10 +24,12 @@ public class AppMain {
             System.out.println("EntityManager created successfully");
             
             // Test initial connection
-            em.getTransaction().begin();
-            Object result = em.createNativeQuery("SELECT 1").getSingleResult();
-            em.getTransaction().commit();
-            System.out.println("Database connection test successful");
+			/*
+			 * em.getTransaction().begin(); Object result =
+			 * em.createNativeQuery("SELECT 1").getSingleResult();
+			 * em.getTransaction().commit();
+			 * System.out.println("Database connection test successful");
+			 */
             
             // Initialize DAOs with transaction support
             BookingDAO bookingDAO = new BookingDAO(em);
@@ -49,12 +51,12 @@ public class AppMain {
             System.out.println("BookingService initialized successfully");
 
             // Create simulation instance
-            BookingSimulation simulation = new BookingSimulation(bookingService, userDAO);
+            BookingSimulation simulation = new BookingSimulation(bookingService, userDAO, eventDAO, ticketDAO);
             System.out.println("BookingSimulation created successfully");
 
             // Run simulation
-            System.out.println("\nStarting simulation for Event ID: 1");
-            simulation.runFullSimulation(1);
+            System.out.println("\nStarting simulation for Event ID: 10");
+            simulation.runFullSimulation(10);//Parameters: eventId ID of the event for which the simulation is run
             
             // Keep console open
             System.out.println("\nSimulation completed. Press Enter to exit...");

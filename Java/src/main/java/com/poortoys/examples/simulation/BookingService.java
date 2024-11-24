@@ -223,7 +223,7 @@ public class BookingService {
     }
 
     /**
-     * This method changes the database structure.
+     * This method changes the database structure for MySQL.
      * It can add or remove columns from tables.
      *
      * @param operation The operation to perform ('drop_user_columns' or 'add_user_columns')

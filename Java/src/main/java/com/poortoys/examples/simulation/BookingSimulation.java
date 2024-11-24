@@ -6,8 +6,11 @@ import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.poortoys.examples.dao.EventDAO;
+import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.entities.User;
+import com.poortoys.examples.entities.Event;
 import com.poortoys.examples.entities.Booking;
 
 /**
@@ -31,6 +34,8 @@ public class BookingSimulation {
     // Dependencies for the simulation
     private final BookingService bookingService;
     private final UserDAO userDAO;
+    private final EventDAO eventDAO;
+    private final TicketDAO ticketDAO;
     private final ExecutorService executorService;
 
     // Atomic counters for tracking simulation metrics
@@ -43,9 +48,11 @@ public class BookingSimulation {
      * @param bookingService Service handling booking operations
      * @param userDAO        DAO for user-related operations
      */
-    public BookingSimulation(BookingService bookingService, UserDAO userDAO) {
+    public BookingSimulation(BookingService bookingService, UserDAO userDAO,EventDAO eventDAO, TicketDAO ticketDAO) {
         this.bookingService = bookingService;
         this.userDAO = userDAO;
+        this.eventDAO = eventDAO;
+        this.ticketDAO = ticketDAO;
         this.executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
     }
 
@@ -194,6 +201,7 @@ public class BookingSimulation {
      */
     private void printFinalMetrics(int eventId, int initialTicketCount) {
         // Get the current list of available ticket serials after the simulation
+    	Event event = eventDAO.findById(eventId);
         List<String> currentTickets = bookingService.getAvailableTicketSerials(eventId);
         // Calculate the total number of tickets booked during the simulation
         int totalTicketsBooked = initialTicketCount - currentTickets.size();
@@ -218,7 +226,11 @@ public class BookingSimulation {
         System.out.println("Successful Bookings: " + successfulBookings.get());
         System.out.println("Failed Bookings: " + failedBookings.get());
 
+
         System.out.println("\nInventory Metrics:");
+		 System.out.println("\nEvent: " + event.getEventName()); 
+		
+		//System.out.println("Initial ticket count: " + ticketDAO.findAvailableTicketsByEventId(eventId));
         System.out.println("Initial Tickets: " + initialTicketCount);
         System.out.println("Total Booked: " + totalTicketsBooked);
         System.out.println("Remaining Tickets: " + currentTickets.size());

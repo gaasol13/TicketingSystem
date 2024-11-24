@@ -4,9 +4,14 @@ import com.poortoys.examples.entities.Ticket;
 import com.poortoys.examples.entities.TicketStatus;
 import com.poortoys.examples.entities.User;
 
+import dev.morphia.query.experimental.filters.Filters;
+
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.TypedQuery;
+
+import org.bson.types.ObjectId;
+
 import java.util.List;
 
 public class TicketDAO {
@@ -85,6 +90,8 @@ public class TicketDAO {
         
         return query.getResultList();
     }
+    
+
     
  
 }

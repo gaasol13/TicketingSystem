@@ -21,6 +21,7 @@ import com.poortoys.examples.dao.EventDAO;
 import com.poortoys.examples.dao.TicketDAO;
 import com.poortoys.examples.dao.UserDAO;
 import com.poortoys.examples.initializer.DataInitializer;
+import com.ticketing.system.entities.Event;
 import com.ticketing.system.entities.User;
 
 import dev.morphia.Datastore;
@@ -103,6 +104,13 @@ public class BookingSimulation {
 	             int successfulBookings = bookingService.getSuccessfulBookings();
 	             int failedBookings = bookingService.getFailedBookings();
 
+	          // retrieve the event details from the database
+	             Event event = eventDAO.findById(eventId);
+	             if (event == null) {
+	                 throw new RuntimeException("Event not found: " + eventId);
+	             }
+	          // Print simulation start information
+	             
 	             // Get initial ticket count
 	             long initialTicketCount = ticketDAO.countAvailableTickets(eventId);
 
@@ -145,10 +153,20 @@ public class BookingSimulation {
 	         System.out.println("Successful Bookings: " + successfulBookings);
 	         System.out.println("Failed Bookings: " + failedBookings);
 	         
+				/*
+				 * Event event = eventDAO.findById(eventId); System.out.println("Event: " +
+				 * event.getName()); //System.out.println("Initial ticket count: " +
+				 * ticketDAO.countAvailableTickets(eventId));
+				 */
 	         System.out.println("\nInventory Metrics:");
+	         Event event = eventDAO.findById(eventId); 
+	         System.out.println("Event: " + event.getName());
 	         System.out.println("Initial Tickets: " + initialTicketCount);
 	         System.out.println("Total Booked: " + (initialTicketCount - remainingTickets));
 	         System.out.println("Remaining Tickets: " + remainingTickets);
+	         
+	         
+	        
 	         
 	         System.out.println("===============================\n");
 	     }
