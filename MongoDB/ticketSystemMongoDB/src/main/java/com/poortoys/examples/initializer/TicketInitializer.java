@@ -44,8 +44,8 @@ public class TicketInitializer implements Initializer{
                 int seatNumber = 1;
 
                 // Define seating configuration
-                int maxRows = 5;   // Adjust as needed
-                int maxSeats = 10; // Adjust as needed
+                int maxRows = 15;   // Adjust as needed
+                int maxSeats = 20; // Adjust as needed
 
                 for (int row = 1; row <= maxRows; row++) {
                     for (int seat = 1; seat <= maxSeats; seat++) {

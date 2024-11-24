@@ -103,6 +103,7 @@ public class DataInitializer {
         }
     }
     
+    
     /**
      * Validates data insertion by checking the count of genres.
      */
@@ -168,6 +169,6 @@ public class DataInitializer {
     }
     
     public BookingDAO getBookingDAO() {
-    	return bookingDAO;
+    return bookingDAO;
     }
 }
