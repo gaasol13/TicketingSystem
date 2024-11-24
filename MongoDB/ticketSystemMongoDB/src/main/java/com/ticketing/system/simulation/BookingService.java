@@ -31,6 +31,7 @@ public class BookingService {
 	    private AtomicInteger successfulBookings = new AtomicInteger(0);
 	    private AtomicInteger failedBookings = new AtomicInteger(0);
 	    private AtomicInteger dynamicFieldUpdates = new AtomicInteger(0);   
+	    private AtomicInteger totalTicketsBooked = new AtomicInteger(0);
 	
 	private final BookingDAO bookingDAO;
     private final TicketDAO ticketDAO;
@@ -80,10 +81,10 @@ public class BookingService {
                 totalQueryTime += (endTime - startTime);
                 totalQueries++;
 
-                System.out.println("Available tickets: " + availableTickets);
+                System.out.println("\nAvailable tickets: " + availableTickets);
 
                 if (availableTickets < quantity) {
-                    System.out.println("Not enough tickets available for event: " + eventId);
+                    System.out.println("\nNot enough tickets available for event: " + eventId);
                     failedBookings.incrementAndGet();
                     session.abortTransaction();
                     return false;
@@ -96,10 +97,10 @@ public class BookingService {
                 totalQueryTime += (endTime - startTime);
                 totalQueries++;
 
-                System.out.println("Tickets booked: " + bookedTickets.size());
+                System.out.println("\nTickets booked: " + bookedTickets.size());
 
                 if (bookedTickets.size() < quantity) {
-                    System.out.println("Failed to book the desired number of tickets. Requested: " + quantity + ", Booked: "
+                    System.out.println("Failed to book the desired number of tickets. Requested: " + quantity + ", Booked: \n"
                             + bookedTickets.size());
                     failedBookings.incrementAndGet();
                     session.abortTransaction();
@@ -108,7 +109,7 @@ public class BookingService {
 
                 // Calculate total price
                 BigDecimal totalPrice = calculateTotalPrice(event, bookedTickets);
-                System.out.println("Total price for booking: " + totalPrice);
+                System.out.println("\nTotal price for booking: \n" + totalPrice);
 
                 // Measure query time for fetching user email
                 startTime = System.nanoTime();
@@ -144,7 +145,12 @@ public class BookingService {
                 // Commit the transaction
                 session.commitTransaction();
                 successfulBookings.incrementAndGet();
-                System.out.println("Booking successful for user " + userId + ". Total successful bookings: " + successfulBookings.get());
+                
+                // Update total tickets booked
+                totalTicketsBooked.addAndGet(bookedTickets.size());
+                
+                
+                System.out.println("Booking successful for user " + userId + ". Total successful bookings: \n" + successfulBookings.get());
                 return true;
 
             } catch (Exception e) {
@@ -160,6 +166,13 @@ public class BookingService {
                 totalQueries++;
             }
         }
+    }
+    
+    
+    
+    // New method to get total tickets booked
+    public int getTotalTicketsBooked() {
+        return totalTicketsBooked.get();
     }
 
     /**

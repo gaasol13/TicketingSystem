@@ -75,32 +75,33 @@ public class DataInitializer {
         ticketDAO = new TicketDAO(datastore);
         bookingDAO = new BookingDAO(datastore);
         
-        // Initialize the list of initializers (only GenreInitializer)
+     // Initialize the list of initializers (only GenreInitializer)
         initializers = Arrays.asList(
-            new GenreInitializer(genreDAO, getGenreNames()),
-            new PerformerInitializer(performerDAO, genreDAO),
-        	new VenueInitializer(venueDAO),
-        	new EventInitializer(eventDAO, performerDAO, venueDAO),
-        	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO),
-        	new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO),
-        	new UserInitializer(userDAO),
-        	new BookingInitializer(bookingDAO, userDAO, ticketDAO, eventDAO)
+		/*
+		 * new GenreInitializer(genreDAO, getGenreNames()), new
+		 * PerformerInitializer(performerDAO, genreDAO), new VenueInitializer(venueDAO),
+		 * new EventInitializer(eventDAO, performerDAO, venueDAO), new
+		 * TicketCategoryInitializer(ticketCategoryDAO, eventDAO), new
+		 * TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO), new
+		 * UserInitializer(userDAO)
+		 */
+        	//new BookingInitializer(bookingDAO, userDAO, ticketDAO, eventDAO)
         );
+    
+		 
+
     }
     
     /**
      * Populates the DB with initial data by executing each initializer.
      */
     public void populateData() {
-        try {
-            for (Initializer initializer : initializers) {
-                initializer.initialize();
-            }
-            validateData();
-        } catch (Exception e) {
-            System.err.println("An error occurred during data initialization: " + e.getMessage());
-            e.printStackTrace();
-        }
+		/*
+		 * try { for (Initializer initializer : initializers) {
+		 * initializer.initialize(); } validateData(); } catch (Exception e) {
+		 * System.err.println("An error occurred during data initialization: " +
+		 * e.getMessage()); e.printStackTrace(); }
+		 */
     }
     
     
@@ -170,5 +171,23 @@ public class DataInitializer {
     
     public BookingDAO getBookingDAO() {
     return bookingDAO;
+    }
+
+    public void initializeSystemConfiguration() {
+		/*
+		 * try { // Only initialize configurations needed for the system // Skip
+		 * BookingInitializer or modify it to not create bookings List<Initializer>
+		 * configInitializers = Arrays.asList( new GenreInitializer(genreDAO,
+		 * getGenreNames()), new PerformerInitializer(performerDAO, genreDAO), new
+		 * VenueInitializer(venueDAO), new EventInitializer(eventDAO, performerDAO,
+		 * venueDAO), //new TicketCategoryInitializer(ticketCategoryDAO, eventDAO),
+		 * //new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO), new
+		 * UserInitializer(userDAO) // BookingInitializer removed or modified );
+		 * 
+		 * for (Initializer initializer : configInitializers) {
+		 * initializer.initialize(); } validateData(); } catch (Exception e) {
+		 * System.err.println("Error during system configuration: " + e.getMessage());
+		 * throw e; }
+		 */
     }
 }

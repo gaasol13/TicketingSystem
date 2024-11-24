@@ -29,10 +29,10 @@ import dev.morphia.Datastore;
 public class BookingSimulation {
 	
 	  // Standardized configuration
-    protected static final int NUM_USERS = 100;               
-    protected static final int MAX_TICKETS_PER_USER = 2;      
+    protected static final int NUM_USERS = 1000;               
+    protected static final int MAX_TICKETS_PER_USER = 1;      
     protected static final int THREAD_POOL_SIZE = 10;         
-    protected static final int SIMULATION_TIMEOUT_MINUTES = 5; 
+    protected static final int SIMULATION_TIMEOUT_MINUTES = 1; 
     protected static final int BATCH_SIZE = 100;
     
     // Standardized metrics across both implementations
@@ -40,6 +40,8 @@ public class BookingSimulation {
     protected long simulationEndTime;
     protected long totalQueryTime = 0;
     protected int totalQueries = 0;
+    private long initialTicketCount;
+    private Event event;
 
 	     private final BookingService bookingService;
 	     private final UserDAO userDAO;
@@ -61,6 +63,21 @@ public class BookingSimulation {
 	      * Runs the booking simulation.
 	      */
 	     public void runSimulation(ObjectId eventId) {
+	    	 
+	         // Get event details first
+	         this.event = eventDAO.findById(eventId);
+	         if (event == null) {
+	             System.out.println("Event not found: " + eventId);
+	             return;
+	         }
+
+	         // Get initial ticket counts
+	         this.initialTicketCount = ticketDAO.countAvailableTickets(eventId);
+	         
+	         // Print initial state
+	         System.out.println("\nStarting simulation for event: " + event.getName());
+	         System.out.println("Initial available tickets: " + initialTicketCount);
+
 	         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 	         List<Callable<Boolean>> tasks = new ArrayList<>();
 
@@ -112,7 +129,7 @@ public class BookingSimulation {
 	          // Print simulation start information
 	             
 	             // Get initial ticket count
-	             long initialTicketCount = ticketDAO.countAvailableTickets(eventId);
+	             //long initialTicketCount = ticketDAO.countAvailableTickets(eventId);
 
 	             // Get remaining tickets
 	             long remainingTickets = ticketDAO.countAvailableTickets(eventId);
@@ -133,40 +150,53 @@ public class BookingSimulation {
 	      */
 	     private void printFinalMetrics(ObjectId eventId, long initialTicketCount, int successfulBookings, int failedBookings, long remainingTickets) {
 	         System.out.println("\n=== Database Simulation Results ===");
+	         
+	         // Configuration
 	         System.out.println("Configuration:");
-	         System.out.println("Concurrent Users: " + NUM_USERS);
-	         System.out.println("Max Tickets Per User: " + MAX_TICKETS_PER_USER);
-	         System.out.println("Thread Pool Size: " + THREAD_POOL_SIZE);
+	         System.out.printf("Concurrent Users: %d%n", NUM_USERS);
+	         System.out.printf("Max Tickets Per User: %d%n", MAX_TICKETS_PER_USER);
+	         System.out.printf("Thread Pool Size: %d%n", THREAD_POOL_SIZE);
+
+	         // Event Details
+	         System.out.println("\nEvent Details:");
+	         System.out.printf("Event: %s%n", event.getName());
+	         System.out.printf("Venue: %s%n", event.getVenue().getVenueName());
+	         // Clear Ticket Counts
+	         System.out.println("\nTicket Summary:");
+	         System.out.printf("Initial Available Tickets: %d%n", initialTicketCount);
+	        // System.out.printf("Tickets Booked: %d%n", successfulBookings * 2); // Multiply by 2 since each booking can have up to 2 tickets
+	         System.out.printf("Remaining Available Tickets: %d%n", remainingTickets);
 	         
-	         System.out.println("\nPerformance Metrics:");
-	         System.out.println("Total Simulation Time: " + 
-	             (simulationEndTime - simulationStartTime) / 1_000_000 + " ms");
-	         System.out.println("Average Query Time: " + 
-	             bookingService.getAverageQueryTime() + " ms");
-	         System.out.println("Total Queries Executed: " + 
-	             bookingService.getTotalQueries());
-	         System.out.println("Dynamic Field Updates: " +
-	                 bookingService.getDynamicFieldUpdates());
+	         // Booking Results
+	         System.out.println("\nBooking Results:");
+	         System.out.printf("Successful Bookings: %d%n", successfulBookings);
+	         System.out.printf("Failed Bookings: %d%n", failedBookings);
+	         System.out.printf("Total Booking Attempts: %d%n", successfulBookings + failedBookings);
 	         
-	         System.out.println("\nTransaction Metrics:");
-	         System.out.println("Total Booking Attempts: " + NUM_USERS);
-	         System.out.println("Successful Bookings: " + successfulBookings);
-	         System.out.println("Failed Bookings: " + failedBookings);
-	         
-				/*
-				 * Event event = eventDAO.findById(eventId); System.out.println("Event: " +
-				 * event.getName()); //System.out.println("Initial ticket count: " +
-				 * ticketDAO.countAvailableTickets(eventId));
-				 */
+	         // Ticket Metrics
 	         System.out.println("\nInventory Metrics:");
-	         Event event = eventDAO.findById(eventId); 
-	         System.out.println("Event: " + event.getName());
-	         System.out.println("Initial Tickets: " + initialTicketCount);
-	         System.out.println("Total Booked: " + (initialTicketCount - remainingTickets));
-	         System.out.println("Remaining Tickets: " + remainingTickets);
-	         
-	         
-	        
+	         System.out.printf("Initial Available Tickets: %d%n", initialTicketCount);
+	         long currentAvailable = ticketDAO.countAvailableTickets(eventId);
+	         System.out.printf("Total Tickets Booked: %d%n", initialTicketCount - currentAvailable);
+	         System.out.printf("Remaining Available: %d%n", currentAvailable);
+
+	         // Performance Metrics
+	         System.out.println("\nPerformance Metrics:");
+	         long duration = (simulationEndTime - simulationStartTime) / 1_000_000;
+	         System.out.printf("Total Simulation Time: %d ms%n", duration);
+	         System.out.printf("Average Query Time: %.2f ms%n", 
+	             bookingService.getAverageQueryTime());
+	         System.out.printf("Total Queries Executed: %d%n", 
+	             bookingService.getTotalQueries());
+
+	         // Transaction Results
+	         System.out.println("\nTransaction Metrics:");
+	         System.out.printf("Total Attempts: %d%n", NUM_USERS);
+	         int successful = bookingService.getSuccessfulBookings();
+	         int failed = bookingService.getFailedBookings();
+	         System.out.printf("Successful: %d (%.1f%%)%n", 
+	             successful, (successful * 100.0 / NUM_USERS));
+	         System.out.printf("Failed: %d%n", failed);
 	         
 	         System.out.println("===============================\n");
 	     }

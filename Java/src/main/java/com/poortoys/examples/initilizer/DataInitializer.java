@@ -64,24 +64,24 @@ public class DataInitializer {
 
 		// Initialize initializers
 		initializers = new ArrayList<>();
-		// Initialize initializers
-		List<String> genreNames = new ArrayList<>();
-
-		initializers.add(new GenreInitializer(genreDAO, genreNames));
-
-
-		initializers.add(new PerformerInitializer(performerDAO, genreDAO));
-
-		// Add venue initializer
-		initializers.add(new VenueInitializer(venueDAO));
-
-		// Add user initializer
-		initializers.add(new UserInitializer(userDAO));
-
-		initializers.add(new EventInitializer(eventDAO, performerDAO, venueDAO));
-		initializers.add(new TicketCategoryInitializer(ticketCategoryDAO, eventDAO));
-		initializers.add(new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO));
-		initializers.add(new BookingInitializer(bookingDAO, userDAO));
+		/*
+		 * // Initialize initializers List<String> genreNames = new ArrayList<>();
+		 * 
+		 * initializers.add(new GenreInitializer(genreDAO, genreNames));
+		 * 
+		 * 
+		 * initializers.add(new PerformerInitializer(performerDAO, genreDAO));
+		 * 
+		 * // Add venue initializer initializers.add(new VenueInitializer(venueDAO));
+		 * 
+		 * // Add user initializer initializers.add(new UserInitializer(userDAO));
+		 * 
+		 * initializers.add(new EventInitializer(eventDAO, performerDAO, venueDAO));
+		 * initializers.add(new TicketCategoryInitializer(ticketCategoryDAO, eventDAO));
+		 * initializers.add(new TicketInitializer(ticketDAO, eventDAO,
+		 * ticketCategoryDAO)); initializers.add(new BookingInitializer(bookingDAO,
+		 * userDAO));
+		 */
 	
 		//initializers.add(new BookingTicketInitializer(bookingTicketDAO, bookingDAO, userDAO, ticketDAO));
 
@@ -96,25 +96,19 @@ public class DataInitializer {
 	 */
 
 	public void populateData() {
-		try {
-
-			for (Initializer initializer : initializers) {
-				em.getTransaction().begin();
-				initializer.initialize();
-				em.getTransaction().commit();
-			}
-
-			validateData();
-
-		} catch (Exception e) {
-			//Rollback transaction in case of any errors
-			if (em.getTransaction().isActive()) {
-				em.getTransaction().rollback();
-				System.out.println("Transaction rolled back due to an error.");
-			}
-			// Print stack trace for debugging
-			e.printStackTrace();
-		}
+		/*
+		 * try {
+		 * 
+		 * for (Initializer initializer : initializers) { em.getTransaction().begin();
+		 * initializer.initialize(); em.getTransaction().commit(); }
+		 * 
+		 * validateData();
+		 * 
+		 * } catch (Exception e) { //Rollback transaction in case of any errors if
+		 * (em.getTransaction().isActive()) { em.getTransaction().rollback();
+		 * System.out.println("Transaction rolled back due to an error."); } // Print
+		 * stack trace for debugging e.printStackTrace(); }
+		 */
 	}
 
 

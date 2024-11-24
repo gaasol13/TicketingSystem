@@ -4,9 +4,10 @@ xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/x
 version="2.0">
 	<persistence-unit name="ticketingsystem" transaction-type="RESOURCE_LOCAL">
 		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-		
-		 <!-- List all entity classes explicitly -->
-        <class>com.poortoys.examples.entities.Booking</class>
+        
+        
+        <!-- Entity Classes -->
+                <class>com.poortoys.examples.entities.Booking</class>
         <class>com.poortoys.examples.entities.BookingTicket</class>
         <class>com.poortoys.examples.entities.User</class>
         <class>com.poortoys.examples.entities.Ticket</class>
@@ -15,39 +16,45 @@ version="2.0">
         <class>com.poortoys.examples.entities.Performer</class>
         <class>com.poortoys.examples.entities.Venue</class>
         <class>com.poortoys.examples.entities.Event</class>
-			
-		<properties>
-			<!-- JDBC connection properties -->
-			<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-			<!-- DB URL -->
-			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/ticketsystem?serverTimezone=UTC"/>
-			<!-- DB credentials -->
-			<property name="javax.persistence.jdbc.user" value="root"/>
-			<property name="javax.persistence.jdbc.password" value="changeme"/>
-			
-			<!-- Hibernate properties -->
-			<!-- Database schema "update" will create/update tables on entity classes -->
-			<property name="hibernate.hbm2ddl.auto" value="update"/>
-			<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
-			 <property name="hibernate.connection.pool_size" value="5"/>
-			<!-- Show SQL queries in console for debugging -->
-			<property name="hibernate.show_sql" value="true"/>
-			<!-- Format SQL for better readability -->
-			<property name="hibernate.format_sql" value="true"/>
-			<property name="hibernate.use_sql_comments" value="true"/>
-			<property name="hibernate.generate_statistics" value="true"/>
-			<property name="hibernate.session.events.log" value="true"/>
-			
-			 <!-- Enable batch processing for optimization -->
+        
+        <properties>
+            <!-- JDBC Connection -->
+            <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/ticketsystem?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC"/>
+            <property name="javax.persistence.jdbc.user" value="root"/>
+            <property name="javax.persistence.jdbc.password" value="changeme"/>
+            
+            <!-- Hibernate Properties -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+            
+            <!-- C3P0 Connection Pool -->
+            <property name="hibernate.c3p0.min_size" value="5"/>
+            <property name="hibernate.c3p0.max_size" value="20"/>
+            <property name="hibernate.c3p0.acquire_increment" value="1"/>
+            <property name="hibernate.c3p0.idle_test_period" value="300"/>
+            <property name="hibernate.c3p0.max_statements" value="50"/>
+            <property name="hibernate.c3p0.timeout" value="1800"/>
+            <property name="hibernate.c3p0.validate" value="true"/>
+            
+            <!-- Additional Hibernate Settings -->
+            <property name="hibernate.connection.provider_class" value="org.hibernate.c3p0.internal.C3P0ConnectionProvider"/>
+            <property name="hibernate.current_session_context_class" value="thread"/>
+            <property name="hibernate.connection.characterEncoding" value="utf8"/>
+            <property name="hibernate.connection.useUnicode" value="true"/>
+            <property name="hibernate.connection.charSet" value="UTF-8"/>
+            
+            <!-- Performance Optimizations -->
             <property name="hibernate.jdbc.batch_size" value="50"/>
-            <property name="hibernate.jdbc.fetch_size" value="50" />
+            <property name="hibernate.jdbc.fetch_size" value="50"/>
             <property name="hibernate.order_inserts" value="true"/>
             <property name="hibernate.order_updates" value="true"/>
             
-            
-            
-            
-		</properties>
-		
-	</persistence-unit>
+            <!-- Debug Settings -->
+            <property name="hibernate.generate_statistics" value="true"/>
+            <property name="hibernate.use_sql_comments" value="true"/>
+        </properties>
+    </persistence-unit>
 </persistence>

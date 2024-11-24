@@ -158,27 +158,30 @@ public class TicketDAO {
 	                .first();
 	    }
 	    
-	    public Ticket findAndModifyTicket(ClientSession session, ObjectId ticketId, String status) {
+	    public Ticket findAndModifyTicket(ObjectId ticketId, String status) {
 	        try {
-	            // Create query to find available ticket by ID
-	            Query<Ticket> query = datastore.find(Ticket.class)
-	                .filter(Filters.and(
+	            var filter = Filters.and(
 	                    Filters.eq("_id", ticketId),
 	                    Filters.eq("status", "AVAILABLE")
-	                ));
+	            );
 
-	            // Create update operation to set the new status
-	            UpdateOperator updateOperator = UpdateOperators.set("status", status);
+	            var update = UpdateOperators.set("status", status);
 
-	            // Execute findAndModify operation
-	            return query.modify(new FindAndModifyOptions()
-	                .returnDocument(ReturnDocument.AFTER)
-	                .upsert(false))
-	                .update(updateOperator)
-	                .execute();
+	            // Define the options to return the document after update
+	            FindOneAndUpdateOptions options = new FindOneAndUpdateOptions()
+	                    .returnDocument(ReturnDocument.AFTER);
+
+	            // Execute the findOneAndUpdate operation
+	            Ticket updatedTicket = datastore.find(Ticket.class)
+	                    .filter(filter)
+	                    .findOneAndUpdate(update, options);
+
+	            return updatedTicket;
+
 
 	        } catch (Exception e) {
 	            System.err.println("Error in findAndModifyTicket: " + e.getMessage());
+	            e.printStackTrace();
 	            return null;
 	        }
 	    }
