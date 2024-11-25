@@ -54,8 +54,8 @@ public class AppMain {
             System.out.println("BookingSimulation created successfully");
 
             // Run simulation
-            System.out.println("\nStarting simulation for Event ID: 1");
-            simulation.runFullSimulation(1);//Parameters: eventId ID of the event for which the simulation is run
+            System.out.println("\nStarting simulation for Event ID: 2");
+            simulation.runSimulation(2);//Parameters: eventId ID of the event for which the simulation is run
             
             // Keep console open
             System.out.println("\nSimulation completed. Press Enter to exit...");

@@ -17,38 +17,34 @@ import com.poortoys.examples.entities.Booking;
  * Class responsible for simulating the booking process in a MySQL-based ticketing system.
  * It tests both transaction management and schema modifications to evaluate MySQL's capabilities.
  */
+/**
+ * Simulates concurrent booking operations in a MySQL-based ticketing system.
+ * Focuses on testing transaction consistency and performance under load.
+ */
 public class BookingSimulation {
-
     // Configuration Constants
     private static final int NUM_USERS = 10;
     private static final int MAX_TICKETS_PER_USER = 1;
     private static final int THREAD_POOL_SIZE = 10;
     private static final int SIMULATION_TIMEOUT_MINUTES = 1;
-    private static final int BATCH_SIZE = 100;
 
-    // Metrics fields
-    protected long simulationStartTime;
-    protected long simulationEndTime;
-    private long schemaModificationTime = 0; // Time taken to modify the schema
-
-    // Dependencies for the simulation
+    // Simulation components
     private final BookingService bookingService;
     private final UserDAO userDAO;
     private final EventDAO eventDAO;
     private final TicketDAO ticketDAO;
     private final ExecutorService executorService;
 
-    // Atomic counters for tracking simulation metrics
+    // Metrics
+    private long simulationStartTime;
+    private long simulationEndTime;
     private final AtomicInteger successfulBookings = new AtomicInteger(0);
     private final AtomicInteger failedBookings = new AtomicInteger(0);
+    private int initialTicketCount;
+    private Event event;
 
-    /**
-     * Constructor for BookingSimulation.
-     *
-     * @param bookingService Service handling booking operations
-     * @param userDAO        DAO for user-related operations
-     */
-    public BookingSimulation(BookingService bookingService, UserDAO userDAO,EventDAO eventDAO, TicketDAO ticketDAO) {
+    public BookingSimulation(BookingService bookingService, UserDAO userDAO, 
+                           EventDAO eventDAO, TicketDAO ticketDAO) {
         this.bookingService = bookingService;
         this.userDAO = userDAO;
         this.eventDAO = eventDAO;
@@ -57,90 +53,44 @@ public class BookingSimulation {
     }
 
     /**
-     * Runs the full simulation encompassing both positive and negative scenarios.
-     *
-     * @param eventId ID of the event for which the simulation is run
+     * Runs the concurrent booking simulation for a specific event.
      */
-    public void runFullSimulation(int eventId) {
+    public void runSimulation(int eventId) {
         try {
-            // Retrieve the initial count of available tickets for the event
-            int initialTicketCount = bookingService.getAvailableTicketSerials(eventId).size();
-            System.out.println("\n=== Starting MySQL Simulation ===");
-            System.out.println("Event ID: " + eventId);
-            System.out.println("Initial ticket count: " + initialTicketCount);
-
-            // Start simulation timing
-            simulationStartTime = System.nanoTime();
-
-            // Execute the positive scenario to test transaction consistency
-            runPositiveScenario(eventId);
-
-            // Execute the negative scenario to test schema modification under concurrency
-            runNegativeScenario();
-
-            // End simulation timing
-            simulationEndTime = System.nanoTime();
-
-            // Print the final metrics after the simulation
-            printFinalMetrics(eventId, initialTicketCount);
+            initializeSimulation(eventId);
+            executeBookingTasks(eventId);
+            waitForCompletion();
+            printSimulationResults(eventId);
         } catch (Exception e) {
-            System.err.println("Simulation failed: " + e.getMessage());
-            e.printStackTrace();
+            handleSimulationError(e);
         } finally {
-            executorService.shutdown();
+            cleanupResources();
         }
     }
 
-    /**
-     * Runs the positive scenario of the simulation, which tests transaction consistency
-     * by simulating multiple users attempting to book tickets concurrently.
-     *
-     * @param eventId ID of the event for which tickets are being booked
-     */
-    private void runPositiveScenario(int eventId) {
-        System.out.println("Running transaction consistency scenario...");
+    private void initializeSimulation(int eventId) {
+        System.out.println("\n=== Starting MySQL Booking Simulation ===");
+        event = eventDAO.findById(eventId);
+        if (event == null) {
+            throw new RuntimeException("Event not found: " + eventId);
+        }
 
+        initialTicketCount = bookingService.getAvailableTicketSerials(eventId).size();
+        System.out.println("Event: " + event.getEventName());
+        System.out.println("Initial ticket count: " + initialTicketCount);
+        simulationStartTime = System.nanoTime();
+    }
+
+    private void executeBookingTasks(int eventId) {
         CountDownLatch completionLatch = new CountDownLatch(NUM_USERS);
-
-        // Get available tickets for the event
         List<String> availableTickets = bookingService.getAvailableTicketSerials(eventId);
-
-        // Get all users from the database
         List<User> users = userDAO.findAll();
-
         Random random = new Random();
 
         for (int i = 0; i < NUM_USERS; i++) {
             executorService.submit(() -> {
                 try {
-                    // Select a random user from the list
-                    User user = users.get(random.nextInt(users.size()));
-
-                    // Decide how many tickets the user will try to book (1 to MAX_TICKETS_PER_USER)
-                    int ticketsToBook = 1 + random.nextInt(MAX_TICKETS_PER_USER);
-
-                    List<String> selectedTickets;
-
-                    synchronized (availableTickets) {
-                        selectedTickets = selectRandomTickets(availableTickets, ticketsToBook);
-                    }
-
-                    if (selectedTickets.isEmpty()) {
-                        failedBookings.incrementAndGet();
-                        return;
-                    }
-
-                    try {
-                        // Attempt to create a booking for the user
-                        Booking booking = bookingService.createBooking(user.getUserId(), selectedTickets, user.getEmail());
-                        if (booking != null) {
-                            successfulBookings.incrementAndGet();
-                        } else {
-                            failedBookings.incrementAndGet();
-                        }
-                    } catch (Exception e) {
-                        failedBookings.incrementAndGet();
-                    }
+                    executeBookingAttempt(users, availableTickets, random);
                 } finally {
                     completionLatch.countDown();
                 }
@@ -148,38 +98,46 @@ public class BookingSimulation {
         }
 
         try {
-            // Wait for all tasks to complete or until the timeout expires
             if (!completionLatch.await(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
-                System.err.println("Simulation timed out before completion.");
-                executorService.shutdownNow();
+                System.err.println("Simulation timed out before completion");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
 
-    /**
-     * Runs the negative scenario of the simulation, which tests the system's ability
-     * to handle schema modifications under concurrency.
-     */
-    private void runNegativeScenario() {
-        System.out.println("Running schema modification scenario...");
+    private void executeBookingAttempt(List<User> users, List<String> availableTickets, 
+                                     Random random) {
+        User user = users.get(random.nextInt(users.size()));
+        int ticketsToBook = 1 + random.nextInt(MAX_TICKETS_PER_USER);
+        List<String> selectedTickets;
 
-        try {
-            // Example operation: drop user columns
-            schemaModificationTime = bookingService.modifySchema("drop_user_columns");
-        } catch (Exception e) {
-            System.err.println("Failed to modify users table: " + e.getMessage());
+        synchronized (availableTickets) {
+            selectedTickets = selectRandomTickets(availableTickets, ticketsToBook);
+        }
+
+        if (!selectedTickets.isEmpty()) {
+            try {
+                Booking booking = bookingService.createBooking(
+                    user.getUserId(), 
+                    selectedTickets, 
+                    user.getEmail()
+                );
+                if (booking != null) {
+                    successfulBookings.incrementAndGet();
+                } else {
+                    failedBookings.incrementAndGet();
+                }
+            } catch (Exception e) {
+                failedBookings.incrementAndGet();
+                System.err.println("Booking failed for user " + user.getUserId() + 
+                                 ": " + e.getMessage());
+            }
+        } else {
+            failedBookings.incrementAndGet();
         }
     }
 
-    /**
-     * Selects a random subset of tickets from the available tickets list.
-     *
-     * @param availableTickets List of available tickets
-     * @param count            Number of tickets to select
-     * @return List of selected tickets
-     */
     private List<String> selectRandomTickets(List<String> availableTickets, int count) {
         List<String> selected = new ArrayList<>();
         Random random = new Random();
@@ -193,48 +151,61 @@ public class BookingSimulation {
         return selected;
     }
 
-    /**
-     * Prints the final metrics and results of the simulation.
-     *
-     * @param eventId            ID of the event
-     * @param initialTicketCount Number of tickets available at the start
-     */
-    private void printFinalMetrics(int eventId, int initialTicketCount) {
-        // Get the current list of available ticket serials after the simulation
-    	Event event = eventDAO.findById(eventId);
+    private void waitForCompletion() {
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        simulationEndTime = System.nanoTime();
+    }
+
+    private void printSimulationResults(int eventId) {
         List<String> currentTickets = bookingService.getAvailableTicketSerials(eventId);
-        // Calculate the total number of tickets booked during the simulation
-        int totalTicketsBooked = initialTicketCount - currentTickets.size();
+        int totalBooked = initialTicketCount - currentTickets.size();
 
-        System.out.println("\n=== Database Simulation Results ===");
+        System.out.println("\n=== Simulation Results ===");
+        
+        // Configuration metrics
         System.out.println("Configuration:");
-        System.out.println("Concurrent Users: " + NUM_USERS);
-        System.out.println("Max Tickets Per User: " + MAX_TICKETS_PER_USER);
-        System.out.println("Thread Pool Size: " + THREAD_POOL_SIZE);
+        System.out.printf("Concurrent Users: %d%n", NUM_USERS);
+        System.out.printf("Max Tickets Per User: %d%n", MAX_TICKETS_PER_USER);
+        System.out.printf("Thread Pool Size: %d%n", THREAD_POOL_SIZE);
 
+        // Performance metrics
         System.out.println("\nPerformance Metrics:");
-        System.out.println("Total Simulation Time: " +
-                (simulationEndTime - simulationStartTime) / 1_000_000 + " ms");
-        System.out.println("Average Query Time: " +
-                bookingService.getAverageQueryTime() + " ms");
-        System.out.println("Total Queries Executed: " +
-                bookingService.getTotalQueries());
-        System.out.println("Schema Modification Time: " + schemaModificationTime + " ms");
+        long duration = (simulationEndTime - simulationStartTime) / 1_000_000;
+        System.out.printf("Total Simulation Time: %d ms%n", duration);
+        System.out.printf("Average Query Time: %.2f ms%n", 
+            bookingService.getAverageQueryTime());
+        System.out.printf("Total Queries: %d%n", 
+            bookingService.getTotalQueries());
 
-        System.out.println("\nTransaction Metrics:");
-        System.out.println("Total Booking Attempts: " + NUM_USERS);
-        System.out.println("Successful Bookings: " + successfulBookings.get());
-        System.out.println("Failed Bookings: " + failedBookings.get());
+        // Booking metrics
+        System.out.println("\nBooking Results:");
+        System.out.printf("Successful Bookings: %d%n", successfulBookings.get());
+        System.out.printf("Failed Bookings: %d%n", failedBookings.get());
+        System.out.printf("Success Rate: %.2f%%%n", 
+            (double)successfulBookings.get() / NUM_USERS * 100);
 
-
-        System.out.println("\nInventory Metrics:");
-		 System.out.println("\nEvent: " + event.getEventName()); 
-		
-		//System.out.println("Initial ticket count: " + ticketDAO.findAvailableTicketsByEventId(eventId));
-        System.out.println("Initial Tickets: " + initialTicketCount);
-        System.out.println("Total Booked: " + totalTicketsBooked);
-        System.out.println("Remaining Tickets: " + currentTickets.size());
+        // Inventory metrics
+        System.out.println("\nInventory Status:");
+        System.out.printf("Initial Tickets: %d%n", initialTicketCount);
+        System.out.printf("Tickets Booked: %d%n", totalBooked);
+        System.out.printf("Remaining Tickets: %d%n", currentTickets.size());
 
         System.out.println("===============================\n");
+    }
+
+    private void handleSimulationError(Exception e) {
+        System.err.println("Simulation failed: " + e.getMessage());
+        e.printStackTrace();
+    }
+
+    private void cleanupResources() {
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
     }
 }
