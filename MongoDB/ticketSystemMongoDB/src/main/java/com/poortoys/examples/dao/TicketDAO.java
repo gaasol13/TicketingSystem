@@ -172,8 +172,8 @@ public class TicketDAO {
 	                    .returnDocument(ReturnDocument.AFTER);
 
 	            // Execute the findOneAndUpdate operation
-	            Ticket updatedTicket = datastore.find(Ticket.class)
-	                    .filter(filter)
+	            Ticket updatedTicket = ((Ticket) datastore.find(Ticket.class)
+	                    .filter(filter))
 	                    .findOneAndUpdate(update, options);
 
 	            return updatedTicket;
