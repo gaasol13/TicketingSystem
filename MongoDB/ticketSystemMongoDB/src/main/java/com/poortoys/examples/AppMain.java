@@ -30,7 +30,7 @@ public class AppMain {
             TicketDAO ticketDAO = dataInitializer.getTicketDAO();
 
             // Event ID for "Rock Fest 2024"
-            ObjectId eventId = new ObjectId("67431483e28821695f08d965");
+            ObjectId eventId = new ObjectId("67431483e28821695f08d966");
             
             // Run simulation
             BookingSimulation simulation = new BookingSimulation(

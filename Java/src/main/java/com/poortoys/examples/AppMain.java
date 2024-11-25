@@ -40,12 +40,7 @@ public class AppMain {
 
             // Initialize the BookingService
             BookingService bookingService = new BookingService(
-                em,
-                userDAO,
-                ticketDAO,
-                bookingDAO,
-                bookingTicketDAO,
-                eventDAO
+                em
             );
             System.out.println("BookingService initialized successfully");
 
