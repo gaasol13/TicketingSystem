@@ -23,7 +23,7 @@ import com.poortoys.examples.entities.Booking;
  */
 public class BookingSimulation {
     // Configuration Constants
-    private static final int NUM_USERS = 1000;
+    private static final int NUM_USERS = 10;
     private static final int MAX_TICKETS_PER_USER = 1;
     private static final int THREAD_POOL_SIZE = 10;
     private static final int SIMULATION_TIMEOUT_MINUTES = 1;
@@ -61,6 +61,7 @@ public class BookingSimulation {
             executeBookingTasks(eventId);
             waitForCompletion();
             printSimulationResults(eventId);
+            
         } catch (Exception e) {
             handleSimulationError(e);
         } finally {
@@ -173,6 +174,11 @@ public class BookingSimulation {
         System.out.printf("Max Tickets Per User: %d%n", MAX_TICKETS_PER_USER);
         System.out.printf("Thread Pool Size: %d%n", THREAD_POOL_SIZE);
 
+     // Event details
+        System.out.println("\nEvent Details:");
+        System.out.printf("Event: %s%n", event.getEventName());
+        System.out.printf("Venue: %s%n", event.getVenue().getVenueName());
+        
         // Performance metrics
         System.out.println("\nPerformance Metrics:");
         long duration = (simulationEndTime - simulationStartTime) / 1_000_000;
@@ -191,12 +197,26 @@ public class BookingSimulation {
 
         // Inventory metrics
         System.out.println("\nInventory Status:");
-        System.out.printf("Initial Tickets: %d%n", initialTicketCount);
-        System.out.printf("Tickets Booked: %d%n", totalBooked);
-        System.out.printf("Remaining Tickets: %d%n", currentTickets.size());
+        System.out.printf("Initial Available Tickets: %d%n", initialTicketCount);
+        System.out.printf("Total Tickets Booked: %d%n", totalBooked);
+        System.out.printf("Remaining Available: %d%n", currentTickets.size());
+
+     // Verify consistency
+		/*
+		 * boolean isConsistent = (initialTicketCount - currentTickets.size()) ==
+		 * currentTickets; System.out.printf("\nData Consistency Check: %s%n",
+		 * isConsistent ? "PASSED" : "FAILED");
+		 */
 
         System.out.println("===============================\n");
     }
+    private void validateTicketQuantity(int quantity) {
+        if (quantity <= 0 || quantity > MAX_TICKETS_PER_USER) {
+            throw new IllegalArgumentException("Invalid ticket quantity: " + quantity);
+        }
+    }
+    
+    
 
     private void handleSimulationError(Exception e) {
         System.err.println("Simulation failed: " + e.getMessage());
@@ -208,4 +228,5 @@ public class BookingSimulation {
             executorService.shutdownNow();
         }
     }
+  
 }

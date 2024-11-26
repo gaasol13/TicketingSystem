@@ -21,6 +21,7 @@ public class BookingService {
     // Metrics tracking
     private final AtomicInteger successfulBookings = new AtomicInteger(0);
     private final AtomicInteger failedBookings = new AtomicInteger(0);
+    private final AtomicInteger totalTicketsBooked = new AtomicInteger(0);
     private long totalQueryTime = 0;
     private int totalQueries = 0;
 
@@ -55,10 +56,13 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
+    
+    
 
     public synchronized Booking createBooking(int userId, List<String> ticketSerials, String email) {
         EntityTransaction tx = em.getTransaction();
         long startTime = System.nanoTime();
+        totalTicketsBooked.addAndGet(ticketSerials.size());
 
         try {
             tx.begin();
@@ -132,6 +136,8 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
+    
+    
 
     // Helper method to record query time for metrics
     private void recordQueryTime(long startTime) {
@@ -156,4 +162,16 @@ public class BookingService {
     public int getTotalQueries() {
         return totalQueries;
     }
+    
+    public List<Ticket> lockTickets(List<String> serials) {
+        return em.createQuery(
+            "SELECT t FROM Ticket t WHERE t.serialNumber IN :serials AND t.status = :status",
+            Ticket.class)
+            .setParameter("serials", serials)
+            .setParameter("status", TicketStatus.AVAILABLE)
+            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+            .getResultList();
+    }
+    
+
 }
