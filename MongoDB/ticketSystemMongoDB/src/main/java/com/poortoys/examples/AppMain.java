@@ -20,6 +20,7 @@ public class AppMain {
         // Initialize system but don't populate bookings
         DataInitializer dataInitializer = new DataInitializer();
         dataInitializer.initializeSystemConfiguration();
+        //dataInitializer.populateData();
         
         try {
         	
@@ -30,7 +31,7 @@ public class AppMain {
             TicketDAO ticketDAO = dataInitializer.getTicketDAO();
 
             // Event ID for "Rock Fest 2024"
-            ObjectId eventId = new ObjectId("67431483e28821695f08d966");
+            ObjectId eventId = new ObjectId("67431483e28821695f08d967");
             
             // Run simulation
             BookingSimulation simulation = new BookingSimulation(

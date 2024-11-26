@@ -50,7 +50,7 @@ public class AppMain {
 
             // Run simulation
             System.out.println("\nStarting simulation for Event ID: 2");
-            simulation.runSimulation(2);//Parameters: eventId ID of the event for which the simulation is run
+            simulation.runSimulation(4);//Parameters: eventId ID of the event for which the simulation is run
             
             // Keep console open
             System.out.println("\nSimulation completed. Press Enter to exit...");
