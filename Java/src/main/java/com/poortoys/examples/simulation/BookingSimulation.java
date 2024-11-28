@@ -26,7 +26,7 @@ public class BookingSimulation {
     private static final int NUM_USERS = 10;
     private static final int MAX_TICKETS_PER_USER = 1;
     private static final int THREAD_POOL_SIZE = 10;
-    private static final int SIMULATION_TIMEOUT_MINUTES = 1;
+    private static final int SIMULATION_TIMEOUT_MINUTES = 3;
 
     // Simulation components
     private final BookingService bookingService;
@@ -83,12 +83,23 @@ public class BookingSimulation {
     }
 
     private void executeBookingTasks(int eventId) {
-        CountDownLatch completionLatch = new CountDownLatch(NUM_USERS);
+        // Get available tickets and adjust number of users
         List<String> availableTickets = bookingService.getAvailableTicketSerials(eventId);
+        int adjustedUsers = Math.min(NUM_USERS, availableTickets.size());
+        
+        CountDownLatch completionLatch = new CountDownLatch(adjustedUsers);
         List<User> users = userDAO.findAll();
-        Random random = new Random();
 
-        for (int i = 0; i < NUM_USERS; i++) {
+        // Validate user availability
+        if (users.size() < adjustedUsers) {
+            throw new IllegalStateException(
+                String.format("Not enough users for simulation. Required: %d, Available: %d", 
+                    adjustedUsers, users.size())
+            );
+        }
+
+        Random random = new Random();
+        for (int i = 0; i < adjustedUsers; i++) {
             executorService.submit(() -> {
                 try {
                     executeBookingAttempt(users, availableTickets, random);

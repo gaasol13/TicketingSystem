@@ -65,7 +65,7 @@ public class BookingDAO {
         return datastore.find(Booking.class)
                 .filter(
                         Filters.eq("user_id", userId),
-                        Filters.eq("status", "confirmed")
+                        Filters.eq("status", "booked")
                 )
                 .iterator(new FindOptions()
                         .sort(Sort.descending("_id"))

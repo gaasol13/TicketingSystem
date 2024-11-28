@@ -159,6 +159,11 @@ public class Ticket {
 				+ ", status=" + status 
 				+ ", purchaseDate=" + purchaseDate + "]";
 	}
+
+	public Object getId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 
 

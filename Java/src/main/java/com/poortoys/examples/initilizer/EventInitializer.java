@@ -32,14 +32,14 @@ public class EventInitializer implements Initializer {
         List<EventData> events = Arrays.asList(
             new EventData("Rock Fest 2024", "The Rockers", createDate(2024, 6, 15), "Grand Arena"),
             new EventData("Jazz Nights", "Jazz Masters", createDate(2024, 7, 20), "Jazz Club"),
-            new EventData("Classical Evening", "Classical Quartet", createDate(2024, 8, 5), "Symphony Hall"),
-            new EventData("Pop Extravaganza", "Pop Icons", createDate(2024, 9, 10), "Pop Dome"),
+            new EventData("Classical Evening", "Classical Quartet", createDate(2024, 8, 5), "Symphony Hall")
+/*            new EventData("Pop Extravaganza", "Pop Icons", createDate(2024, 9, 10), "Pop Dome"),
             new EventData("Electronic Beats", "Electronica", createDate(2024, 10, 25), "Electronica Center"),
             new EventData("Hip-Hop Bash", "Hip-Hop Crew", createDate(2024, 11, 15), "Hip-Hop Venue"),
             new EventData("Country Fair", "Country Stars", createDate(2024, 12, 5), "Country Grounds"),
             new EventData("Blues Festival", "Blues Band", createDate(2025, 1, 20), "Blues House"),
             new EventData("Reggae Summer", "Reggae Rhythms", createDate(2025, 2, 25), "Reggae Beach"),
-            new EventData("Metal Mania", "Metal Heads", createDate(2025, 3, 30), "Metal Hall")
+            new EventData("Metal Mania", "Metal Heads", createDate(2025, 3, 30), "Metal Hall")*/
         );
 
         for (EventData eventData : events) {

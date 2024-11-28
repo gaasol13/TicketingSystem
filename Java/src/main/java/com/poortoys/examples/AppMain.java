@@ -1,5 +1,7 @@
 package com.poortoys.examples;
 
+import java.util.Map;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -13,7 +15,7 @@ public class AppMain {
         EntityManager em = null;
         
         try {
-            System.out.println("Starting Ticketing System Simulation...");
+            System.out.println("Starting MySQL Ticketing System Simulation...");
             // Create EntityManagerFactory
             emf = Persistence.createEntityManagerFactory("ticketingsystem");
             System.out.println("EntityManagerFactory created successfully");
@@ -21,14 +23,6 @@ public class AppMain {
             // Create EntityManager
             em = emf.createEntityManager();
             System.out.println("EntityManager created successfully");
-            
-            // Test initial connection
-			/*
-			 * em.getTransaction().begin(); Object result =
-			 * em.createNativeQuery("SELECT 1").getSingleResult();
-			 * em.getTransaction().commit();
-			 * System.out.println("Database connection test successful");
-			 */
             
             // Initialize DAOs with transaction support
             BookingDAO bookingDAO = new BookingDAO(em);
@@ -38,19 +32,45 @@ public class AppMain {
             BookingTicketDAO bookingTicketDAO = new BookingTicketDAO(em);
             System.out.println("DAOs initialized successfully");
 
+            // Initialize schema modifier
+            MySQLSchemaModifier schemaModifier = new MySQLSchemaModifier(em);
+            System.out.println("Schema modifier initialized successfully");
+
+            // Execute schema modifications
+            try {
+                System.out.println("\nExecuting schema modifications...");
+                
+                // Example modifications
+                long duration = schemaModifier.modifySchema("add_booking_metadata");
+                System.out.println("Schema modification completed in " + duration + " ms");
+
+                
+                // Print schema modification metrics
+                Map<String, Object> metrics = schemaModifier.getMetrics();
+                System.out.println("\nSchema Modification Metrics:");
+                metrics.forEach((key, value) -> 
+                    System.out.printf("%-25s: %s%n", key, value));
+                
+            } catch (Exception e) {
+                System.err.println("Schema modification failed: " + e.getMessage());
+            }
+
             // Initialize the BookingService
-            BookingService bookingService = new BookingService(
-                em
-            );
+            BookingService bookingService = new BookingService( em );
             System.out.println("BookingService initialized successfully");
 
             // Create simulation instance
-            BookingSimulation simulation = new BookingSimulation(bookingService, userDAO, eventDAO, ticketDAO);
+            BookingSimulation simulation = new BookingSimulation(
+                bookingService, 
+                userDAO, 
+                eventDAO, 
+                ticketDAO
+            );
             System.out.println("BookingSimulation created successfully");
 
             // Run simulation
             System.out.println("\nStarting simulation for Event ID: 2");
-            simulation.runSimulation(4);//Parameters: eventId ID of the event for which the simulation is run
+            simulation.runSimulation(2);
             
             // Keep console open
             System.out.println("\nSimulation completed. Press Enter to exit...");
@@ -89,24 +109,3 @@ public class AppMain {
         }
     }
 }
-
-
-/*
- * I'd like to know the
- * 
- * 
- * I'd like to standardize my AppMain to work with both scenarios and enhance the displayed metrics (in the simulation class) with the following information:
-
-
-Event Name: Instead of the event ID, display the actual event name.
-
-Venue: Show the venue where the event will take place.
-
-Total Tickets by Category: Display the total number of tickets available for each category of the event.
-
-Total Tickets Booked by Category: Show the number of tickets already booked for each category.
-
-Total Tickets Available: Display the total number of tickets still available across all categories.
-
-Total Ticket Categories:
- */

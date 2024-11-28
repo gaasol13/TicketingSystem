@@ -14,9 +14,7 @@ import com.poortoys.examples.dao.*;
 import com.ticketing.system.entities.*;
 import dev.morphia.Datastore;
 
-/**
- * Service class handling ticket booking operations using MongoDB.
- * Focuses on concurrent booking operations with transaction management.
+/* Focuses on concurrent booking operations with transaction management.
  */
 public class BookingService {
     private final BookingDAO bookingDAO;
@@ -51,7 +49,7 @@ public class BookingService {
 
             try {
                 Event event = findAndValidateEvent(eventId);
-                validateTicketAvailability(eventId, quantity);
+                validateTicketAvailability(session, eventId, quantity);
                 List<Ticket> bookedTickets = bookAvailableTickets(session, eventId, quantity);
                 validateBookedTickets(bookedTickets, quantity);
                 
@@ -89,16 +87,20 @@ public class BookingService {
         }
         return event;
     }
+    
+    
 
-    private void validateTicketAvailability(ObjectId eventId, int quantity) {
+    private void validateTicketAvailability(ClientSession session, ObjectId eventId, int quantity) {
         long startTime = System.nanoTime();
-        long availableTickets = ticketDAO.countAvailableTickets(eventId);
+        long availableTickets = ticketDAO.countAvailableTickets(session, eventId);
         recordQueryTime(startTime);
 
         if (availableTickets < quantity) {
             throw new RuntimeException("Not enough tickets available for event: " + eventId);
         }
     }
+    
+    
 
     private List<Ticket> bookAvailableTickets(ClientSession session, 
                                             ObjectId eventId, int quantity) {
@@ -108,6 +110,8 @@ public class BookingService {
         recordQueryTime(startTime);
         return bookedTickets;
     }
+    
+    
 
     private void validateBookedTickets(List<Ticket> bookedTickets, int quantity) {
         if (bookedTickets.size() < quantity) {
@@ -115,6 +119,8 @@ public class BookingService {
                 "Requested: " + quantity + ", Booked: " + bookedTickets.size());
         }
     }
+    
+    
 
     private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
         BigDecimal total = BigDecimal.ZERO;
@@ -124,6 +130,8 @@ public class BookingService {
         }
         return total;
     }
+    
+    
 
     private BigDecimal getPriceForCategory(Event event, String ticketCategory) {
         return event.getTicketCategories().stream()
@@ -132,6 +140,8 @@ public class BookingService {
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
     }
+    
+    
 
     private String getUserEmail(ObjectId userId) {
         long startTime = System.nanoTime();
@@ -142,6 +152,8 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
+    
+    
 
     private Booking createBooking(ObjectId userId, ObjectId eventId, String userEmail,
                                 BigDecimal totalPrice, List<Ticket> bookedTickets) {
@@ -155,10 +167,12 @@ public class BookingService {
             totalPrice,
             BigDecimal.ZERO, // discount
             totalPrice, // finalPrice
-            "confirmed",
+            "booked",
             extractTicketIds(bookedTickets)
         );
     }
+    
+    
 
     private void persistBooking(Booking booking) {
         long startTime = System.nanoTime();
@@ -168,6 +182,8 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
+    
+    
 
     private List<ObjectId> extractTicketIds(List<Ticket> tickets) {
         List<ObjectId> ticketIds = new ArrayList<>();
@@ -176,6 +192,8 @@ public class BookingService {
         }
         return ticketIds;
     }
+    
+    
 
     private void handleTransactionError(ClientSession session, ObjectId userId, Exception e) {
         System.err.println("Error during booking: " + e.getMessage());
@@ -185,47 +203,63 @@ public class BookingService {
         System.out.println("Booking failed for user " + userId + 
                          ". Total failed bookings: " + failedBookings.get());
     }
+    
+    
 
     private void updateMetrics(int ticketsBooked) {
         successfulBookings.incrementAndGet();
         totalTicketsBooked.addAndGet(ticketsBooked);
     }
+    
+    
 
     private void recordQueryTime(long startTime) {
         long endTime = System.nanoTime();
         totalQueryTime += (endTime - startTime);
         totalQueries++;
     }
+    
+    
 
     // Metrics retrieval methods
     public int getSuccessfulBookings() {
         return successfulBookings.get();
     }
+    
+    
 
     public int getFailedBookings() {
         return failedBookings.get();
     }
 
+    
+    
     public int getTotalTicketsBooked() {
         return totalTicketsBooked.get();
     }
+    
+    
 
     public double getAverageQueryTime() {
         return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0; // Convert to milliseconds
     }
+    
+    
 
     public int getTotalQueries() {
         return totalQueries;
     }
 
+    
+    
     /**
      * Validate current database state for consistency checking
      */
-    public Map<String, Object> validateDatabaseState(ObjectId eventId) {
+    public Map<String, Object> validateDatabaseState(ClientSession session, ObjectId eventId) {
         Map<String, Object> state = new HashMap<>();
         
         try {
-            long availableTickets = ticketDAO.countAvailableTickets(eventId);
+            List<Ticket> availableTickets = ticketDAO.findAvailableTickets(eventId);
             long totalBookings = bookingDAO.count();
             Event event = eventDAO.findById(eventId);
             
@@ -245,6 +279,8 @@ public class BookingService {
         return state;
     }
     
+    
+    
     /**
      * Check if a specific booking exists and is valid
      */
@@ -259,7 +295,7 @@ public class BookingService {
             List<ObjectId> ticketIds = booking.getTickets();
             for (ObjectId ticketId : ticketIds) {
                 Ticket ticket = ticketDAO.findById(ticketId);
-                if (ticket == null || !"SOLD".equals(ticket.getStatus())) {
+                if (ticket == null || !"booked".equals(ticket.getStatus())) {
                     return false;
                 }
             }

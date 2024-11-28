@@ -5,12 +5,17 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import javax.transaction.Transaction;
+
 import org.bson.types.ObjectId;
 
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
+import com.mongodb.client.model.Updates;
 import com.ticketing.system.entities.Ticket;
+
+
 
 import dev.morphia.Datastore;
 import dev.morphia.FindAndModifyOptions;
@@ -53,6 +58,7 @@ public class TicketDAO {
 	            .iterator()
 	            .toList();
 	    }
+	    
 	    
 	    // Find tickets by their IDs
 	    public List<Ticket> findByIds(List<ObjectId> ticketIds) {
@@ -135,10 +141,11 @@ public class TicketDAO {
 
 	        return bookedTickets;
 	    }
+
 	    /**
 	     * Counts the number of available tickets for a specific event.
 	     */
-	    public long countAvailableTickets(ObjectId eventId) {
+	    public long countAvailableTickets(ClientSession session, ObjectId eventId) {
 	        return datastore.find(Ticket.class)
 	                .filter(
 	                        Filters.eq("event_id", eventId),
@@ -158,33 +165,37 @@ public class TicketDAO {
 	                .first();
 	    }
 	    
-	    public Ticket findAndModifyTicket(ObjectId ticketId, String status) {
-	        try {
-	            var filter = Filters.and(
-	                    Filters.eq("_id", ticketId),
-	                    Filters.eq("status", "AVAILABLE")
-	            );
+	    
+	    public Ticket findAndReserveTicket(ClientSession session, ObjectId ticketId, String status) {
+	        Query<Ticket> query = datastore.find(Ticket.class)
+		            .filter(Filters.and(
+		                Filters.eq("_id", ticketId),
+		                Filters.eq("status", "available")
+		            ));
+		        
+		        UpdateOperator updateOperator = UpdateOperators.addToSet("status", status);
+		         query.update((List<UpdateOperator>) new ModifyOptions()
+				            .returnDocument(ReturnDocument.AFTER)
+				            .upsert(false))
+				            .execute();
+				return null;
+				    }
 
-	            var update = UpdateOperators.set("status", status);
+			public void update(Ticket ticket) {
+				datastore.save(ticket);
+				
+			}
 
-	            // Define the options to return the document after update
-	            FindOneAndUpdateOptions options = new FindOneAndUpdateOptions()
-	                    .returnDocument(ReturnDocument.AFTER);
-
-	            // Execute the findOneAndUpdate operation
-	            Ticket updatedTicket = ((Ticket) datastore.find(Ticket.class)
-	                    .filter(filter))
-	                    .findOneAndUpdate(update, options);
-
-	            return updatedTicket;
+	    
+		/*
+		 * public Ticket findAndReserveTicket(ClientSession session, ObjectId eventId) {
+		 * return datastore.find(Ticket.class) .filter( Filters.and(
+		 * Filters.eq("eventId", eventId), Filters.eq("status", "AVAILABLE") ) )
+		 * .modify( Updates.combine( Updates.set("status", "LOCKED"),
+		 * Updates.set("lockedAt", new Date()) ) ) .execute(session); }
+		 */
 
 
-	        } catch (Exception e) {
-	            System.err.println("Error in findAndModifyTicket: " + e.getMessage());
-	            e.printStackTrace();
-	            return null;
-	        }
-	    }
 
 		
 

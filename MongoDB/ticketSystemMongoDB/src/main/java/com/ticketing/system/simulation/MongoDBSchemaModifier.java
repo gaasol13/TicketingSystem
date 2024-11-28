@@ -16,7 +16,6 @@ package com.ticketing.system.simulation;
 	    private int totalSchemaMods = 0;
 	    private final AtomicInteger successfulMods = new AtomicInteger(0);
 	    private final AtomicInteger failedMods = new AtomicInteger(0);
-	    private final AtomicInteger dynamicFieldUpdates = new AtomicInteger(0);
 
 	    public MongoDBSchemaModifier(Datastore datastore) {
 	        this.datastore = datastore;
@@ -26,18 +25,14 @@ package com.ticketing.system.simulation;
 	        System.out.println("Attempting MongoDB schema modification: " + operation);
 	        long startTime = System.nanoTime();
 	        
-	        try (ClientSession session = datastore.startSession()) {
-	            session.startTransaction();
+	        try {
+	            MongoCollection<Document> collection = datastore.getDatabase()
+	                .getCollection(collectionName);
 	            
 	            Document modification = createModification(operation);
-	            
-	            datastore.getDatabase()
-	                    .getCollection(collectionName)
-	                    .updateMany(session, new Document(), modification);
+	            collection.updateMany(new Document(), modification);
 
-	            session.commitTransaction();
 	            successfulMods.incrementAndGet();
-	            
 	            long duration = (System.nanoTime() - startTime);
 	            totalSchemaModTime += duration;
 	            totalSchemaMods++;
@@ -48,6 +43,7 @@ package com.ticketing.system.simulation;
 	        } catch (Exception e) {
 	            failedMods.incrementAndGet();
 	            System.err.println("Schema modification failed: " + e.getMessage());
+	            e.printStackTrace();
 	            return false;
 	        }
 	    }
@@ -58,7 +54,7 @@ package com.ticketing.system.simulation;
 	                return new Document("$set", new Document()
 	                    .append("confirmation_code", "")
 	                    .append("confirmation_time", null));
-	                
+	             
 	            case "ADD_BOOKING_METADATA":
 	                return new Document("$set", new Document()
 	                    .append("booking_source", "ONLINE")
@@ -70,51 +66,8 @@ package com.ticketing.system.simulation;
 	                    .append("dynamic_pricing", new Document())
 	                    .append("seat_features", new Document()));
 	                
-	            case "ADD_INDEX":
-	                datastore.ensureIndexes();
-	                return new Document();
-	                
 	            default:
 	                throw new IllegalArgumentException("Unknown operation: " + operation);
-	        }
-	    }
-
-	    public boolean modifyCollection(String operation, Map<String, Object> fields) {
-	        try {
-	            MongoCollection<Document> collection = datastore.getDatabase().getCollection("tickets");
-	            long startTime = System.nanoTime();
-
-	            switch (operation) {
-	                case "DROP":
-	                    collection.drop();
-	                    break;
-
-	                case "ALTER":
-	                    Document modification = new Document("$set", new Document(fields));
-	                    collection.updateMany(new Document(), modification);
-	                    break;
-
-	                case "CREATE":
-	                    Document doc = new Document(fields)
-	                        .append("created", new Date());
-	                    collection.insertOne(doc);
-	                    dynamicFieldUpdates.addAndGet(fields.size());
-	                    break;
-
-	                default:
-	                    throw new IllegalArgumentException("Unknown operation: " + operation);
-	            }
-
-	            long endTime = System.nanoTime();
-	            totalSchemaModTime += (endTime - startTime);
-	            totalSchemaMods++;
-	            successfulMods.incrementAndGet();
-	            
-	            return true;
-	        } catch (Exception e) {
-	            failedMods.incrementAndGet();
-	            System.err.println("Collection operation failed: " + e.getMessage());
-	            return false;
 	        }
 	    }
 
@@ -125,9 +78,6 @@ package com.ticketing.system.simulation;
 	        metrics.put("average_modification_time_ms", 
 	            totalSchemaMods > 0 ? (totalSchemaModTime / totalSchemaMods / 1_000_000.0) : 0);
 	        metrics.put("total_modifications", totalSchemaMods);
-	        metrics.put("dynamic_field_updates", dynamicFieldUpdates.get());
 	        return metrics;
 	    }
 	}
-
-

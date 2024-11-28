@@ -54,8 +54,8 @@ public class TicketInitializer implements Initializer {
                 int seatNumber = 1; // Resetting seatNumber for each category
 
                 //create tickets for each row and seat up to a maximum limit to avoid infinite generation
-                int maxRows = 15;   // Maximum rows per category, can be adjusted
-                int maxSeats = 20; // Maximum seats per row, can be adjusted
+                int maxRows = 50;   // Maximum rows per category, can be adjusted
+                int maxSeats = 200; // Maximum seats per row, can be adjusted
 
                 for (int row = 1; row <= maxRows; row++) {
                     for (int seat = 1; seat <= maxSeats; seat++) {

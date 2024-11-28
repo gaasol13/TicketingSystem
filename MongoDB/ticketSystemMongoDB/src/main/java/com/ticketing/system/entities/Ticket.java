@@ -3,6 +3,7 @@ package com.ticketing.system.entities;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 
 import dev.morphia.annotations.Entity;
@@ -55,7 +56,27 @@ public class Ticket {
 	// Timestamp of when the ticket was purchased
 	@Property("purchase_date")
 	private Date purchaseDate;
-	
+	 // New fields for pessimistic locking
+    private Date lockTimestamp;
+    private Binary lockSessionId;  // To store MongoDB session ID
+    
+    // ... existing getters and setters ...
+    
+    public Date getLockTimestamp() {
+        return lockTimestamp;
+    }
+    
+    public void setLockTimestamp(Date lockTimestamp) {
+        this.lockTimestamp = lockTimestamp;
+    }
+    
+    public Binary getLockSessionId() {
+        return lockSessionId;
+    }
+    
+    public void setLockSessionId(Binary lockSessionId) {
+        this.lockSessionId = lockSessionId;
+    }
 
 	// Default constructor
 	public Ticket() {}

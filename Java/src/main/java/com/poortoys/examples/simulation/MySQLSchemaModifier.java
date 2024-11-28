@@ -53,21 +53,26 @@ public class MySQLSchemaModifier {
         switch (operation.toLowerCase()) {
             case "add_user_columns":
                 return "ALTER TABLE users " +
-                       "ADD COLUMN confirmation_code VARCHAR(100), " +
-                       "ADD COLUMN confirmation_time DATETIME";
+                       "ADD COLUMN confirmation_code2 VARCHAR(100), " +
+                       "ADD COLUMN confirmation_time2 DATETIME";
             case "drop_user_columns":
                 return "ALTER TABLE users " +
-                       "DROP COLUMN confirmation_code, " +
-                       "DROP COLUMN confirmation_time";
+                       "DROP COLUMN confirmation_code2, " +
+                       "DROP COLUMN confirmation_time2";
             case "add_booking_metadata":
                 return "ALTER TABLE bookings " +
-                       "ADD COLUMN processing_time TIMESTAMP, " +
-                       "ADD COLUMN payment_method VARCHAR(50), " +
-                       "ADD COLUMN booking_source VARCHAR(50)";
+                       "ADD COLUMN processing_time5 TIMESTAMP, " +
+                       "ADD COLUMN payment_method5 VARCHAR(50), " +
+                       "ADD COLUMN booking_source5 VARCHAR(50)";
+            case "drop_booking_metadata":
+                return "ALTER TABLE bookings " +
+                       "DROP COLUMN processing_time5, " +
+                       "DROP COLUMN payment_method5, " +
+                       "DROP COLUMN booking_source5";
             case "modify_ticket_structure":
                 return "ALTER TABLE tickets " +
-                       "ADD COLUMN seat_features JSON, " +
-                       "ADD COLUMN price_adjustment DECIMAL(10,2)";
+                       "ADD COLUMN seat_features4 JSON, " +
+                       "ADD COLUMN price_adjustment4 DECIMAL(10,2)";
             default:
                 throw new IllegalArgumentException("Unknown operation: " + operation);
         }

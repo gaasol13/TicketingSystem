@@ -77,19 +77,15 @@ public class DataInitializer {
         
      // Initialize the list of initializers (only GenreInitializer)
         initializers = Arrays.asList(
-		
-		  new GenreInitializer(genreDAO, getGenreNames()), new
-		  PerformerInitializer(performerDAO, genreDAO), new VenueInitializer(venueDAO),
-		  new EventInitializer(eventDAO, performerDAO, venueDAO), new
-		  TicketCategoryInitializer(ticketCategoryDAO, eventDAO), new
-		  TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO), new
-		  UserInitializer(userDAO)
-		 
-        	//new BookingInitializer(bookingDAO, userDAO, ticketDAO, eventDAO)
-        );
-    
-		 
-
+                new GenreInitializer(genreDAO, getGenreNames()),
+                new PerformerInitializer(performerDAO, genreDAO),
+            	new VenueInitializer(venueDAO),
+            	new EventInitializer(eventDAO, performerDAO, venueDAO),
+            	new TicketCategoryInitializer(ticketCategoryDAO, eventDAO),
+            	new TicketInitializer(ticketDAO, eventDAO, ticketCategoryDAO),
+            	new UserInitializer(userDAO),
+            	new BookingInitializer(bookingDAO, userDAO, ticketDAO, eventDAO)
+            );
     }
     
     /**
@@ -97,10 +93,12 @@ public class DataInitializer {
      */
     public void populateData() {
 		
-		  try { for (Initializer initializer : initializers) {
-		  initializer.initialize(); } validateData(); } catch (Exception e) {
-		  System.err.println("An error occurred during data initialization: " +
-		  e.getMessage()); e.printStackTrace(); }
+		/*
+		 * try { for (Initializer initializer : initializers) {
+		 * initializer.initialize(); } validateData(); } catch (Exception e) {
+		 * System.err.println("An error occurred during data initialization: " +
+		 * e.getMessage()); e.printStackTrace(); }
+		 */
 		 
     }
     

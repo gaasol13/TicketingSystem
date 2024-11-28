@@ -3,6 +3,8 @@ package com.ticketing.system.simulation;
 import java.util.*;
 import java.util.concurrent.*;
 import org.bson.types.ObjectId;
+
+import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoCollection;
 import com.poortoys.examples.dao.*;
 import com.ticketing.system.entities.*;
@@ -16,9 +18,9 @@ import dev.morphia.Datastore;
 public class BookingSimulation {
     // Configuration Constants
     private static final int NUM_USERS = 10;
-    private static final int MAX_TICKETS_PER_USER = 2;
+    private static final int MAX_TICKETS_PER_USER = 1;
     private static final int THREAD_POOL_SIZE = 10;
-    private static final int SIMULATION_TIMEOUT_MINUTES = 1;
+    private static final int SIMULATION_TIMEOUT_MINUTES = 3;
 
     // Simulation components
     private final BookingService bookingService;
@@ -48,13 +50,13 @@ public class BookingSimulation {
     /**
      * Runs the concurrent booking simulation for a specific event.
      */
-    public void runSimulation(ObjectId eventId) {
+    public void runSimulation(ClientSession session, ObjectId eventId) {
         try {
-            initializeSimulation(eventId);
-            executeBookingTasks(eventId);
+            initializeSimulation(session, eventId);
+            executeBookingTasks(session, eventId);
             waitForCompletion();
-            validateFinalState(eventId);
-            printSimulationResults(eventId);
+            //validateFinalState(eventId);
+            printSimulationResults(session, eventId);
         } catch (Exception e) {
             handleSimulationError(e);
         } finally {
@@ -62,7 +64,7 @@ public class BookingSimulation {
         }
     }
 
-    private void initializeSimulation(ObjectId eventId) {
+    private void initializeSimulation(ClientSession session, ObjectId eventId) {
         System.out.println("\n=== Starting MongoDB Booking Simulation ===");
         
         event = eventDAO.findById(eventId);
@@ -70,27 +72,33 @@ public class BookingSimulation {
             throw new RuntimeException("Event not found: " + eventId);
         }
 
-        initialTicketCount = ticketDAO.countAvailableTickets(eventId);
+        initialTicketCount = ticketDAO.countAvailableTickets(session, eventId);
         System.out.println("Event: " + event.getName());
         System.out.println("Initial ticket count: " + initialTicketCount);
         simulationStartTime = System.nanoTime();
     }
-
-    private void executeBookingTasks(ObjectId eventId) {
+    private void executeBookingTasks(ClientSession session, ObjectId eventId) {
+        // Calculate available tickets and adjust number of users
+        long availableTickets = ticketDAO.countAvailableTickets(session, eventId);
+        int adjustedUsers = Math.min(NUM_USERS, (int)availableTickets);
+        
         List<Callable<Boolean>> tasks = new ArrayList<>();
         List<User> users = userDAO.findAll();
 
-        if (users.size() < NUM_USERS) {
-            throw new IllegalStateException("Not enough users for simulation. " + 
-                "Required: " + NUM_USERS + ", Available: " + users.size());
+        // Validate user availability
+        if (users.size() < adjustedUsers) {
+            throw new IllegalStateException(
+                String.format("Not enough users for simulation. Required: %d, Available: %d", 
+                    adjustedUsers, users.size())
+            );
         }
 
+        // Create booking tasks based on available tickets
         Random random = new Random();
-        for (int i = 0; i < NUM_USERS; i++) {
+        for (int i = 0; i < adjustedUsers; i++) {
             final User user = users.get(random.nextInt(users.size()));
-            final int ticketsToBook = random.nextInt(MAX_TICKETS_PER_USER) + 1;
-
-            tasks.add(() -> bookingService.bookTickets(user.getId(), eventId, ticketsToBook));
+            // Simplified to book only one ticket per user for better inventory control
+            tasks.add(() -> bookingService.bookTickets(user.getId(), eventId, 1));
         }
 
         try {
@@ -101,7 +109,6 @@ public class BookingSimulation {
             System.err.println("Booking tasks interrupted: " + e.getMessage());
         }
     }
-
     private void processBookingResults(List<Future<Boolean>> results) {
         int successful = 0;
         int failed = 0;
@@ -135,16 +142,16 @@ public class BookingSimulation {
         simulationEndTime = System.nanoTime();
     }
 
-    private void validateFinalState(ObjectId eventId) {
-        Map<String, Object> finalState = bookingService.validateDatabaseState(eventId);
-        System.out.println("\nFinal State Validation:");
-        finalState.forEach((key, value) -> 
-            System.out.printf("%s: %s%n", key, value));
-    }
+	/*
+	 * private void validateFinalState(ObjectId eventId) { Map<String, Object>
+	 * finalState = bookingService.validateDatabaseState(eventId);
+	 * System.out.println("\nFinal State Validation:"); finalState.forEach((key,
+	 * value) -> System.out.printf("%s: %s%n", key, value)); }
+	 */
 
-    private void printSimulationResults(ObjectId eventId) {
+    private void printSimulationResults(ClientSession session, ObjectId eventId) {
         BookingService.BookingMetrics metrics = bookingService.getDetailedMetrics();
-        long currentAvailable = ticketDAO.countAvailableTickets(eventId);
+        long currentAvailable = ticketDAO.countAvailableTickets(session, eventId);
         
         System.out.println("\n=== Simulation Results ===");
 

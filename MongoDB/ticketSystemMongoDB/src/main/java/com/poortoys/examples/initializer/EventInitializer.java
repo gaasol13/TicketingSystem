@@ -67,7 +67,7 @@ public void initialize() {
             Arrays.asList("Classical Quartet"),
             parseDate("2024-08-05"),
             "Symphony Hall"
-        ),
+       /* ),
         // Event 4: Pop Extravaganza
         new EventData(
             "Pop Extravaganza",
@@ -116,8 +116,8 @@ public void initialize() {
             Arrays.asList("Metal Heads"),
             parseDate("2025-03-30"),
             "Metal Hall"
-        )
-    );
+        )*/
+    ));
 
     // Iterate through each EventData to populate the database
     for (EventData data : events) {
