@@ -1,204 +1,157 @@
+/**
+ * TicketDAO class is responsible for performing CRUD operations on Ticket entities.
+ * It uses Morphia for Object-Document Mapping (ODM) to interact with MongoDB.
+ * This class also handles ticket booking operations with support for transactions.
+ */
+
 package com.poortoys.examples.dao;
 
+// Import necessary Morphia and MongoDB libraries for database operations
+import com.mongodb.client.ClientSession;
+import dev.morphia.Datastore;
+import dev.morphia.query.experimental.filters.Filters;
+import dev.morphia.query.experimental.updates.UpdateOperators;
+import org.bson.types.ObjectId;
+import com.ticketing.system.entities.Ticket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import javax.transaction.Transaction;
-
-import org.bson.types.ObjectId;
-
-import com.mongodb.client.ClientSession;
-import com.mongodb.client.model.FindOneAndUpdateOptions;
-import com.mongodb.client.model.ReturnDocument;
-import com.mongodb.client.model.Updates;
-import com.ticketing.system.entities.Ticket;
-
-
-
-import dev.morphia.Datastore;
-import dev.morphia.FindAndModifyOptions;
-import dev.morphia.ModifyOptions;
-import dev.morphia.query.FindOptions;
-import dev.morphia.query.Query;
-import dev.morphia.query.Update;
-import dev.morphia.query.UpdateOperations;
-import dev.morphia.query.experimental.filters.Filters;
-import dev.morphia.query.experimental.updates.UpdateOperator;
-import dev.morphia.query.experimental.updates.UpdateOperators;
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 public class TicketDAO {
-	
-	   private final Datastore datastore;
-	 
+    // Datastore instance for MongoDB interaction using Morphia
+    private final Datastore datastore;
 
-	    public TicketDAO(Datastore datastore) {
-	        this.datastore = datastore;
-	    }
+    /**
+     * Constructor to initialize the DAO with a datastore instance.
+     * @param datastore The Morphia Datastore object connected to the MongoDB database.
+     */
+    public TicketDAO(Datastore datastore) {
+        this.datastore = datastore;
+    }
 
-	    // Find all tickets for a specific event
-	    public List<Ticket> findByEventId(ObjectId eventId) {
-	        return datastore.find(Ticket.class)
-	                .filter(Filters.eq("event_id", eventId))
-	                .iterator()
-	                .toList();
-	    }
+    /**
+     * Books multiple tickets atomically within a transaction.
+     * @param session The ClientSession object for managing transactions.
+     * @param eventId The ID of the event for which tickets are being booked.
+     * @param quantity The number of tickets to book.
+     * @return A list of booked tickets, or an empty list if no tickets were booked.
+     */
+    public List<Ticket> bookAvailableTickets(ClientSession session, ObjectId eventId, int quantity) {
+        List<Ticket> bookedTickets = new ArrayList<>(); // List to store successfully booked tickets
 
-	    // Find all available tickets for a specific event
-	 // Add this method to your TicketDAO class
-	    public List<Ticket> findAvailableTickets(ObjectId eventId) {
-	        return datastore.find(Ticket.class)
-	            .filter(Filters.and(
-	                Filters.eq("event_id", eventId),
-	                Filters.eq("status", "AVAILABLE")
-	            ))
-	            .iterator()
-	            .toList();
-	    }
-	    
-	    
-	    // Find tickets by their IDs
-	    public List<Ticket> findByIds(List<ObjectId> ticketIds) {
-	        return datastore.find(Ticket.class)
-	                .filter(Filters.in("_id", ticketIds))
-	                .iterator()
-	                .toList();
-	    }
+        try {
+            // Attempt to book the requested quantity of tickets
+            for (int i = 0; i < quantity; i++) {
+                Ticket ticket = datastore.find(Ticket.class)
+                    .filter(Filters.and(
+                        Filters.eq("event_id", eventId), // Match tickets for the specified event
+                        Filters.eq("status", "available") // Only select tickets with 'available' status
+                    ))
+                    .modify(UpdateOperators.set("status", "booked")) // Atomically update the status to 'booked'
+                    .execute(); // Execute the query and fetch the modified ticket
+                
+                if (ticket != null) {
+                    bookedTickets.add(ticket); // Add the booked ticket to the list
+                }
+            }
+            return bookedTickets; // Return the list of successfully booked tickets
+        } catch (Exception e) {
+            System.err.println("Error booking tickets: " + e.getMessage()); // Log any exceptions encountered
+            throw e; // Rethrow the exception to allow higher-level handling
+        }
+    }
 
-	    // Find a ticket by its serial number
-	    public Ticket findBySerialNumber(String serialNumber) {
-	        return datastore.find(Ticket.class)
-	                .filter(Filters.eq("serial_number", serialNumber))
-	                .first();
-	    }
+    /**
+     * Counts the number of available tickets for a specific event.
+     * @param session The ClientSession object for managing transactions.
+     * @param eventId The ID of the event.
+     * @return The total number of available tickets for the event.
+     */
+    public long countAvailableTickets(ClientSession session, ObjectId eventId) {
+        return datastore.find(Ticket.class)
+            .filter(Filters.and(
+                Filters.eq("event_id", eventId), // Match tickets for the specified event
+                Filters.eq("status", "available") // Only count tickets with 'available' status
+            ))
+            .count(); // Return the total count of matching tickets
+    }
 
-	    // Find all tickets
-	    public List<Ticket> findAll() {
-	        return datastore.find(Ticket.class)
-	                .iterator()
-	                .toList();
-	    }
+    /**
+     * Rolls back any booked tickets in case of transaction failure.
+     * @param session The ClientSession object for managing transactions.
+     * @param tickets The list of tickets to roll back.
+     */
+    private void rollbackBookings(ClientSession session, List<Ticket> tickets) {
+        for (Ticket ticket : tickets) { // Loop through the list of tickets to be rolled back
+            try {
+                ticket.setStatus("available"); // Reset the ticket status to 'available'
+                ticket.setPurchaseDate(null); // Remove the purchase date
+                datastore.save(ticket); // Save the updated ticket back to the database
+            } catch (Exception e) {
+                System.err.println("Error during rollback for ticket " +
+                    ticket.getId() + ": " + e.getMessage()); // Log any rollback errors
+            }
+        }
+    }
 
-	    // Persist a new ticket into the database
-	    public void create(Ticket ticket) {
-	        datastore.save(ticket);
-	    }
+    /**
+     * Finds all available tickets for a specific event.
+     * @param eventId The ID of the event.
+     * @return A list of tickets that are available for booking.
+     */
+    public List<Ticket> findAvailableTickets(ObjectId eventId) {
+        return datastore.find(Ticket.class)
+            .filter(Filters.and(
+                Filters.eq("event_id", eventId), // Match tickets for the specified event
+                Filters.eq("status", "available") // Only select tickets with 'available' status
+            ))
+            .iterator() // Fetch the results as an iterator
+            .toList(); // Convert the iterator to a list and return it
+    }
 
-	    // Update an existing ticket in the database
-	    public void update(ClientSession session, ObjectId ticketId, String status) {
-	        Query<Ticket> query = datastore.find(Ticket.class)
-	            .filter(Filters.eq("_id", ticketId));
-	        UpdateOperator update = UpdateOperators.set("status", status);
-	        query.update(update).execute();
-	    }
+    /**
+     * Finds a ticket by its serial number.
+     * @param serialNumber The serial number of the ticket.
+     * @return The Ticket object if found, or null otherwise.
+     */
+    public Ticket findBySerialNumber(String serialNumber) {
+        return datastore.find(Ticket.class)
+            .filter(Filters.eq("serial_number", serialNumber)) // Match the ticket by its serial number
+            .first(); // Return the first matching result
+    }
 
-	    // Delete a ticket from the database
-	    public void delete(Ticket ticket) {
-	        datastore.delete(ticket);
-	    }
+    /**
+     * Creates a new ticket in the database.
+     * @param ticket The Ticket object to create.
+     */
+    public void create(Ticket ticket) {
+        datastore.save(ticket); // Save the new ticket to the database
+    }
 
-	    // Count the total number of tickets
-	    public long count() {
-	        return datastore.find(Ticket.class).count();
-	    }
-	    
-	    /**
-	     * Atomically finds and updates available tickets to 'booked' status.
-	     */
-	    public List<Ticket> bookAvailableTickets(ClientSession session, ObjectId eventId, int quantity) {
-	        List<Ticket> bookedTickets = new ArrayList<>();
+    /**
+     * Updates an existing ticket in the database.
+     * @param ticket The Ticket object to update.
+     */
+    public void update(Ticket ticket) {
+        datastore.save(ticket); // Save the updated ticket to the database
+    }
 
-	        try {
-	            for (int i = 0; i < quantity; i++) {
-	                Ticket ticket = datastore.find(Ticket.class)
-	                    .filter(Filters.and(
-	                        Filters.eq("event_id", eventId),
-	                        Filters.eq("status", "available")
-	                    ))
-	                    .first();
+    /**
+     * Finds a ticket by its unique ID.
+     * @param id The ObjectId of the ticket.
+     * @return The Ticket object if found, or null otherwise.
+     */
+    public Ticket findById(ObjectId id) {
+        return datastore.find(Ticket.class)
+            .filter(Filters.eq("_id", id)) // Match the ticket by its unique ID
+            .first(); // Return the first matching result
+    }
 
-	                if (ticket != null) {
-	                    ticket.setStatus("booked");
-	                    ticket.setPurchaseDate(new Date());
-	                    datastore.save(ticket);
-	                    bookedTickets.add(ticket);
-	                } else {
-	                    break;
-	                }
-	            }
-
-	            if (bookedTickets.isEmpty()) {
-	                System.err.println("No available tickets found for event " + eventId);
-	            }
-	        } catch (Exception e) {
-	            System.err.println("Failed to book tickets for event " + eventId + ": " + e.getMessage());
-	            e.printStackTrace();
-	            throw e;
-	        }
-
-	        return bookedTickets;
-	    }
-
-	    /**
-	     * Counts the number of available tickets for a specific event.
-	     */
-	    public long countAvailableTickets(ClientSession session, ObjectId eventId) {
-	        return datastore.find(Ticket.class)
-	                .filter(
-	                        Filters.eq("event_id", eventId),
-	                        Filters.eq("status", "available")
-	                )
-	                .count();
-	    }
-
-	    // Other existing methods...
-	    
-	    /**
-	     * Finds a User by their ObjectId.
-	     */
-	    public Ticket findById(ObjectId id) {
-	        return datastore.find(Ticket.class)
-	                .filter(Filters.eq("_id", id))
-	                .first();
-	    }
-	    
-	    
-	    public Ticket findAndReserveTicket(ClientSession session, ObjectId ticketId, String status) {
-	        Query<Ticket> query = datastore.find(Ticket.class)
-		            .filter(Filters.and(
-		                Filters.eq("_id", ticketId),
-		                Filters.eq("status", "available")
-		            ));
-		        
-		        UpdateOperator updateOperator = UpdateOperators.addToSet("status", status);
-		         query.update((List<UpdateOperator>) new ModifyOptions()
-				            .returnDocument(ReturnDocument.AFTER)
-				            .upsert(false))
-				            .execute();
-				return null;
-				    }
-
-			public void update(Ticket ticket) {
-				datastore.save(ticket);
-				
-			}
-
-	    
-		/*
-		 * public Ticket findAndReserveTicket(ClientSession session, ObjectId eventId) {
-		 * return datastore.find(Ticket.class) .filter( Filters.and(
-		 * Filters.eq("eventId", eventId), Filters.eq("status", "AVAILABLE") ) )
-		 * .modify( Updates.combine( Updates.set("status", "LOCKED"),
-		 * Updates.set("lockedAt", new Date()) ) ) .execute(session); }
-		 */
-
-
-
-		
-
-
-
+    /**
+     * Gets the total count of all tickets in the database.
+     * @return The total number of tickets.
+     */
+    public long count() {
+        return datastore.find(Ticket.class).count(); // Count and return all tickets
+    }
 }

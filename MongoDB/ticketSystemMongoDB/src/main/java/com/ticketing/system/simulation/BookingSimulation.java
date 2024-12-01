@@ -1,9 +1,13 @@
+// This Java program simulates a booking system using MongoDB with concurrent user operations
+// It focuses on testing transaction consistency and performance under heavy load
+
 package com.ticketing.system.simulation;
 
+// Importing required classes for database interaction, concurrency, and utilities
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.bson.types.ObjectId;
-
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoCollection;
 import com.poortoys.examples.dao.*;
@@ -12,259 +16,179 @@ import com.ticketing.system.simulation.BookingService;
 import dev.morphia.Datastore;
 
 /**
- * Simulates concurrent booking operations in a MongoDB-based ticketing system.
- * Focuses on testing transaction consistency and performance under load.
+ * Class representing a booking simulation in a MongoDB-based ticketing system.
+ * Simulates concurrent booking attempts, measures system performance, and checks data consistency.
  */
 public class BookingSimulation {
-    // Configuration Constants
-    private static final int NUM_USERS = 10;
-    private static final int MAX_TICKETS_PER_USER = 1;
-    private static final int THREAD_POOL_SIZE = 10;
-    private static final int SIMULATION_TIMEOUT_MINUTES = 3;
 
-    // Simulation components
-    private final BookingService bookingService;
-    private final UserDAO userDAO;
-    private final EventDAO eventDAO;
-    private final TicketDAO ticketDAO;
-    private final Datastore datastore;
-    private final ExecutorService executorService;
+    // Configuration constants
+    private static final int NUM_USERS = 100; // Number of simulated users
+    private static final int MAX_TICKETS_PER_USER = 1; // Max tickets a single user can book
+    private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors(); // Number of CPU cores available
+    private static final int THREAD_POOL_SIZE = NUMBER_OF_CORES * 2; // Thread pool size for managing tasks
+    private static final int SIMULATION_TIMEOUT_MINUTES = 1; // Time limit for simulation
+
+    // Dependencies and shared resources
+    private final BookingService bookingService; // Handles booking logic and database interaction
+    private final UserDAO userDAO; // Data Access Object for managing user data
+    private final EventDAO eventDAO; // DAO for managing event data
+    private final TicketDAO ticketDAO; // DAO for managing ticket data
+    private final Datastore datastore; // Datastore for MongoDB interaction
+    private final ExecutorService executorService; // Manages threads for concurrent booking tasks
 
     // Simulation state
-    private long simulationStartTime;
-    private long simulationEndTime;
-    private long initialTicketCount;
-    private Event event;
+    private long simulationStartTime; // Start time of the simulation
+    private long simulationEndTime; // End time of the simulation
+    private long initialTicketCount; // Initial count of available tickets for the event
+    private Event event; // Event being simulated
 
-    public BookingSimulation(Datastore datastore, BookingDAO bookingDAO, 
-                           UserDAO userDAO, EventDAO eventDAO, TicketDAO ticketDAO) {
+    /**
+     * Constructor for initializing the simulation with required dependencies.
+     */
+    public BookingSimulation(Datastore datastore, BookingDAO bookingDAO, UserDAO userDAO, 
+                             EventDAO eventDAO, TicketDAO ticketDAO) {
         this.datastore = datastore;
         this.userDAO = userDAO;
         this.eventDAO = eventDAO;
         this.ticketDAO = ticketDAO;
-        this.bookingService = new BookingService(bookingDAO, ticketDAO, userDAO, 
-                                               eventDAO, datastore);
-        this.executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        this.bookingService = new BookingService(bookingDAO, ticketDAO, userDAO, eventDAO, datastore);
+        this.executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE); // Creating a thread pool
     }
 
     /**
-     * Runs the concurrent booking simulation for a specific event.
+     * Starts the simulation with a specific event.
      */
     public void runSimulation(ClientSession session, ObjectId eventId) {
         try {
+            // Initialize the simulation state
             initializeSimulation(session, eventId);
+
+            // Execute booking tasks concurrently
             executeBookingTasks(session, eventId);
+
+            // Wait for all tasks to complete
             waitForCompletion();
-            //validateFinalState(eventId);
+
+            // Print the simulation results
             printSimulationResults(session, eventId);
         } catch (Exception e) {
-            handleSimulationError(e);
+            handleSimulationError(e); // Handle exceptions during the simulation
         } finally {
-            cleanupResources();
+            cleanupResources(); // Clean up resources such as threads
         }
     }
 
+    /**
+     * Initializes the simulation state by loading the event and initial ticket count.
+     */
     private void initializeSimulation(ClientSession session, ObjectId eventId) {
         System.out.println("\n=== Starting MongoDB Booking Simulation ===");
         
+        // Fetch event details
         event = eventDAO.findById(eventId);
         if (event == null) {
             throw new RuntimeException("Event not found: " + eventId);
         }
 
+        // Retrieve the initial number of available tickets
         initialTicketCount = ticketDAO.countAvailableTickets(session, eventId);
         System.out.println("Event: " + event.getName());
         System.out.println("Initial ticket count: " + initialTicketCount);
+
+        // Mark the start time of the simulation
         simulationStartTime = System.nanoTime();
     }
+
+    /**
+     * Executes booking tasks concurrently for the simulated users.
+     */
     private void executeBookingTasks(ClientSession session, ObjectId eventId) {
-        // Calculate available tickets and adjust number of users
         long availableTickets = ticketDAO.countAvailableTickets(session, eventId);
-        int adjustedUsers = Math.min(NUM_USERS, (int)availableTickets);
+        int adjustedUsers = Math.min(NUM_USERS, (int) availableTickets); // Adjust user count to available tickets
         
-        List<Callable<Boolean>> tasks = new ArrayList<>();
-        List<User> users = userDAO.findAll();
+        CountDownLatch completionLatch = new CountDownLatch(adjustedUsers); // Latch to track task completion
+        ConcurrentHashMap<String, AtomicInteger> resultTracker = new ConcurrentHashMap<>(); // Tracks booking outcomes
+        
+        List<User> users = userDAO.findAll(); // Load all users from the database
+        Random random = new Random(); // Random object for selecting users
 
-        // Validate user availability
-        if (users.size() < adjustedUsers) {
-            throw new IllegalStateException(
-                String.format("Not enough users for simulation. Required: %d, Available: %d", 
-                    adjustedUsers, users.size())
-            );
-        }
-
-        // Create booking tasks based on available tickets
-        Random random = new Random();
+        // Loop to submit booking tasks for users
         for (int i = 0; i < adjustedUsers; i++) {
-            final User user = users.get(random.nextInt(users.size()));
-            // Simplified to book only one ticket per user for better inventory control
-            tasks.add(() -> bookingService.bookTickets(user.getId(), eventId, 1));
+            final User user = users.get(random.nextInt(users.size())); // Select a random user
+            executorService.submit(() -> { // Submit a task to the thread pool
+                try {
+                    // Attempt to book tickets for the user
+                    boolean success = bookingService.bookTickets(user.getId(), eventId, 1);
+
+                    // Update the result tracker based on the outcome
+                    resultTracker.computeIfAbsent(success ? "successful" : "failed", 
+                        k -> new AtomicInteger()).incrementAndGet();
+                } finally {
+                    completionLatch.countDown(); // Signal task completion
+                }
+            });
         }
 
+        // Wait for all tasks to complete or timeout
         try {
-            List<Future<Boolean>> results = executorService.invokeAll(tasks);
-            processBookingResults(results);
+            completionLatch.await(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.err.println("Booking tasks interrupted: " + e.getMessage());
         }
     }
-    private void processBookingResults(List<Future<Boolean>> results) {
-        int successful = 0;
-        int failed = 0;
 
-        for (Future<Boolean> result : results) {
-            try {
-                if (result.get(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
-                    successful++;
-                } else {
-                    failed++;
-                }
-            } catch (Exception e) {
-                failed++;
-                System.err.println("Error processing booking result: " + e.getMessage());
-            }
-        }
-
-        System.out.printf("Processed results - Successful: %d, Failed: %d%n", 
-            successful, failed);
-    }
-
+    /**
+     * Waits for all threads in the executor service to finish.
+     */
     private void waitForCompletion() {
-        executorService.shutdown();
+        executorService.shutdown(); // Initiate shutdown of the thread pool
         try {
+            // Wait for all threads to terminate or timeout
             if (!executorService.awaitTermination(SIMULATION_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
                 System.err.println("Simulation timed out before completion");
             }
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            Thread.currentThread().interrupt(); // Restore interrupt status if interrupted
         }
-        simulationEndTime = System.nanoTime();
+        simulationEndTime = System.nanoTime(); // Mark the end time of the simulation
     }
 
-	/*
-	 * private void validateFinalState(ObjectId eventId) { Map<String, Object>
-	 * finalState = bookingService.validateDatabaseState(eventId);
-	 * System.out.println("\nFinal State Validation:"); finalState.forEach((key,
-	 * value) -> System.out.printf("%s: %s%n", key, value)); }
-	 */
-
+    /**
+     * Prints the simulation results, including performance and booking metrics.
+     */
     private void printSimulationResults(ClientSession session, ObjectId eventId) {
-        BookingService.BookingMetrics metrics = bookingService.getDetailedMetrics();
-        long currentAvailable = ticketDAO.countAvailableTickets(session, eventId);
+        BookingService.BookingMetrics metrics = bookingService.getDetailedMetrics(); // Get booking metrics
+        long currentAvailable = ticketDAO.countAvailableTickets(session, eventId); // Current ticket availability
         
         System.out.println("\n=== Simulation Results ===");
 
-        // Configuration metrics
-        System.out.println("Configuration:");
-        System.out.printf("Concurrent Users: %d%n", NUM_USERS);
-        System.out.printf("Max Tickets Per User: %d%n", MAX_TICKETS_PER_USER);
-        System.out.printf("Thread Pool Size: %d%n", THREAD_POOL_SIZE);
-
-        // Event details
-        System.out.println("\nEvent Details:");
-        System.out.printf("Event: %s%n", event.getName());
-        System.out.printf("Venue: %s%n", event.getVenue().getVenueName());
-
-        // Performance metrics
-        System.out.println("\nPerformance Metrics:");
-        long duration = (simulationEndTime - simulationStartTime) / 1_000_000;
-        System.out.printf("Total Simulation Time: %d ms%n", duration);
-        System.out.printf("Average Query Time: %.2f ms%n", metrics.getAverageQueryTime());
-        System.out.printf("Total Queries: %d%n", metrics.getTotalQueries());
-
-        // Booking metrics
-        System.out.println("\nBooking Results:");
+        // Display configuration and performance details
+        System.out.printf("Total Simulation Time: %d ms%n", 
+            (simulationEndTime - simulationStartTime) / 1_000_000);
         System.out.printf("Successful Bookings: %d%n", metrics.getSuccessfulBookings());
         System.out.printf("Failed Bookings: %d%n", metrics.getFailedBookings());
-        System.out.printf("Total Attempts: %d%n", 
-            metrics.getSuccessfulBookings() + metrics.getFailedBookings());
-        System.out.printf("Success Rate: %.2f%%%n", 
-            (double)metrics.getSuccessfulBookings() / NUM_USERS * 100);
-
-        // Inventory metrics
-        System.out.println("\nInventory Status:");
         System.out.printf("Initial Available Tickets: %d%n", initialTicketCount);
-        System.out.printf("Total Tickets Booked: %d%n", 
-            metrics.getTotalTicketsBooked());
         System.out.printf("Remaining Available: %d%n", currentAvailable);
-        
-        // Verify consistency
-        boolean isConsistent = (initialTicketCount - metrics.getTotalTicketsBooked()) 
-            == currentAvailable;
-        System.out.printf("\nData Consistency Check: %s%n", 
-            isConsistent ? "PASSED" : "FAILED");
 
-        System.out.println("===============================\n");
+        // Check data consistency by comparing expected and actual ticket counts
+        boolean isConsistent = (initialTicketCount - metrics.getTotalTicketsBooked()) == currentAvailable;
+        System.out.printf("Data Consistency Check: %s%n", isConsistent ? "PASSED" : "FAILED");
     }
 
+    /**
+     * Handles any errors that occur during the simulation.
+     */
     private void handleSimulationError(Exception e) {
         System.err.println("Simulation failed: " + e.getMessage());
-        e.printStackTrace();
+        e.printStackTrace(); // Print the exception stack trace
     }
 
+    /**
+     * Cleans up resources such as shutting down the executor service.
+     */
     private void cleanupResources() {
         if (!executorService.isShutdown()) {
-            executorService.shutdownNow();
-        }
-    }
-
-    /**
-     * Retrieves simulation statistics for analysis
-     */
-    public SimulationStats getSimulationStats() {
-        return new SimulationStats(
-            simulationStartTime,
-            simulationEndTime,
-            initialTicketCount,
-            bookingService.getDetailedMetrics()
-        );
-    }
-
-    /**
-     * Inner class to hold simulation statistics
-     */
-    public static class SimulationStats {
-        private final long startTime;
-        private final long endTime;
-        private final long initialTickets;
-        private final BookingService.BookingMetrics bookingMetrics;
-
-        public SimulationStats(long startTime, long endTime, long initialTickets,
-                             BookingService.BookingMetrics bookingMetrics) {
-            this.startTime = startTime;
-            this.endTime = endTime;
-            this.initialTickets = initialTickets;
-            this.bookingMetrics = bookingMetrics;
-        }
-
-        public long getDurationMs() {
-            return (endTime - startTime) / 1_000_000;
-        }
-
-        public double getSuccessRate() {
-            int total = bookingMetrics.getSuccessfulBookings() + 
-                       bookingMetrics.getFailedBookings();
-            return total > 0 ? 
-                (double) bookingMetrics.getSuccessfulBookings() / total * 100 : 0;
-        }
-
-        public long getRemainingTickets() {
-            return initialTickets - bookingMetrics.getTotalTicketsBooked();
-        }
-
-        public BookingService.BookingMetrics getBookingMetrics() {
-            return bookingMetrics;
-        }
-
-        @Override
-        public String toString() {
-            return String.format(
-                "SimulationStats{duration=%dms, successRate=%.2f%%, " +
-                "initialTickets=%d, remainingTickets=%d, metrics=%s}",
-                getDurationMs(), getSuccessRate(), initialTickets, 
-                getRemainingTickets(), bookingMetrics
-            );
+            executorService.shutdownNow(); // Force shutdown if not already done
         }
     }
 }

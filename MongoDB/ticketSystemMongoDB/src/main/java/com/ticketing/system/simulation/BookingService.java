@@ -1,37 +1,44 @@
+/**
+ * BookingService class handles all operations related to ticket booking in a MongoDB-based ticketing system.
+ * This class ensures data consistency, handles transactions, calculates pricing, and records metrics for performance analysis.
+ */
 package com.ticketing.system.simulation;
 
-
+// Importing necessary libraries for database interaction and entity management
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.bson.types.ObjectId;
+import com.mongodb.ReadConcern;
+import com.mongodb.ReadPreference;
+import com.mongodb.TransactionOptions;
+import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
 import com.poortoys.examples.dao.*;
 import com.ticketing.system.entities.*;
 import dev.morphia.Datastore;
 
-/* Focuses on concurrent booking operations with transaction management.
- */
 public class BookingService {
+
+    // DAO instances for database interaction with Booking, Ticket, User, and Event collections
     private final BookingDAO bookingDAO;
     private final TicketDAO ticketDAO;
     private final UserDAO userDAO;
     private final EventDAO eventDAO;
     private final Datastore datastore;
 
-    // Metrics
+    // Atomic counters for tracking performance metrics
     private final AtomicInteger successfulBookings = new AtomicInteger(0);
     private final AtomicInteger failedBookings = new AtomicInteger(0);
     private final AtomicInteger totalTicketsBooked = new AtomicInteger(0);
-    private long totalQueryTime = 0;
-    private int totalQueries = 0;
 
-    public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO,
-                         UserDAO userDAO, EventDAO eventDAO, Datastore datastore) {
+    // Variables for measuring database query times
+    private long totalQueryTime = 0; // Total time spent on queries in nanoseconds
+    private int totalQueries = 0;   // Total number of queries executed
+
+    // Constructor for initializing the service with required DAOs and Datastore
+    public BookingService(BookingDAO bookingDAO, TicketDAO ticketDAO, UserDAO userDAO,
+                          EventDAO eventDAO, Datastore datastore) {
         this.bookingDAO = bookingDAO;
         this.ticketDAO = ticketDAO;
         this.userDAO = userDAO;
@@ -39,296 +46,185 @@ public class BookingService {
         this.datastore = datastore;
     }
 
+    /**
+     * Handles the ticket booking process using transactions.
+     * Ensures that all operations (e.g., ticket allocation, booking creation) are atomic.
+     * @param userId   ID of the user booking tickets
+     * @param eventId  ID of the event for which tickets are being booked
+     * @param quantity Number of tickets requested
+     * @return boolean indicating success or failure of the booking
+     */
     public boolean bookTickets(ObjectId userId, ObjectId eventId, int quantity) {
-        System.out.println("User " + userId + " attempting to book " + 
-                          quantity + " tickets for event " + eventId);
+        // Setting transaction options for read/write concerns and isolation level
+        TransactionOptions txnOptions = TransactionOptions.builder()
+                .readPreference(ReadPreference.primary()) // Use the primary node for consistency
+                .readConcern(ReadConcern.SNAPSHOT)       // Snapshot isolation to ensure data consistency
+                .writeConcern(WriteConcern.MAJORITY)     // Ensure data is written to majority of nodes
+                .build();
 
+        // Starting a client session to manage the transaction
         try (ClientSession session = datastore.startSession()) {
-            session.startTransaction();
-            long queryStartTime = System.nanoTime();
+            session.startTransaction(txnOptions); // Initiate a transaction
+
+            long queryStartTime = System.nanoTime(); // Start time for measuring transaction duration
 
             try {
+                // Step 1: Validate that the event exists and is valid
                 Event event = findAndValidateEvent(eventId);
-                validateTicketAvailability(session, eventId, quantity);
-                List<Ticket> bookedTickets = bookAvailableTickets(session, eventId, quantity);
-                validateBookedTickets(bookedTickets, quantity);
-                
-                BigDecimal totalPrice = calculateTotalPrice(event, bookedTickets);
-                String userEmail = getUserEmail(userId);
-                
-                Booking booking = createBooking(userId, eventId, userEmail, 
-                                              totalPrice, bookedTickets);
-                persistBooking(booking);
 
+                // Step 2: Validate that the user exists and is eligible to book tickets
+                User user = findAndValidateUser(userId);
+
+                // Step 3: Attempt to book tickets atomically
+                List<Ticket> bookedTickets = ticketDAO.bookAvailableTickets(session, eventId, quantity);
+                if (bookedTickets.isEmpty()) { // If no tickets were booked, abort the transaction
+                    handleTransactionError(session, userId, new RuntimeException("No tickets available"));
+                    return false;
+                }
+
+                // Step 4: Calculate the total price of the booked tickets
+                BigDecimal totalPrice = calculateTotalPrice(event, bookedTickets);
+
+                // Step 5: Create and save a booking record in the database
+                Booking booking = createBooking(userId, eventId, user.getEmail(), totalPrice, bookedTickets);
+                bookingDAO.create(booking);
+
+                // Commit the transaction upon successful execution of all operations
                 session.commitTransaction();
+
+                // Update the metrics to reflect a successful booking
                 updateMetrics(bookedTickets.size());
-                
-                System.out.println("Booking successful for user " + userId + 
-                    ". Total successful bookings: " + successfulBookings.get());
+
+                System.out.println("Booking successful for user " + userId);
                 return true;
 
-            } catch (Exception e) {
+            } catch (Exception e) { // Handle exceptions during transaction execution
                 handleTransactionError(session, userId, e);
                 return false;
             } finally {
-                recordQueryTime(queryStartTime);
+                recordQueryTime(queryStartTime); // Record the time taken for the transaction
+                if (session.hasActiveTransaction()) {
+                    session.abortTransaction(); // Ensure no active transactions are left open
+                }
             }
         }
     }
 
+    // Retrieves and validates an event based on its ID
     private Event findAndValidateEvent(ObjectId eventId) {
         long startTime = System.nanoTime();
-        Event event = eventDAO.findById(eventId);
-        recordQueryTime(startTime);
-
-        if (event == null) {
-            System.out.println("Event not found: " + eventId);
-            throw new RuntimeException("Event not found: " + eventId);
+        try {
+            Event event = eventDAO.findById(eventId); // Fetch event from the database
+            if (event == null) { // Validate the existence of the event
+                throw new RuntimeException("Event not found: " + eventId);
+            }
+            return event;
+        } finally {
+            recordQueryTime(startTime); // Record the time taken to query the event
         }
-        return event;
     }
-    
-    
 
-    private void validateTicketAvailability(ClientSession session, ObjectId eventId, int quantity) {
+    // Retrieves and validates a user based on their ID
+    private User findAndValidateUser(ObjectId userId) {
         long startTime = System.nanoTime();
-        long availableTickets = ticketDAO.countAvailableTickets(session, eventId);
-        recordQueryTime(startTime);
-
-        if (availableTickets < quantity) {
-            throw new RuntimeException("Not enough tickets available for event: " + eventId);
+        try {
+            User user = userDAO.findById(userId); // Fetch user from the database
+            if (user == null) { // Validate the existence of the user
+                throw new RuntimeException("User not found: " + userId);
+            }
+            return user;
+        } finally {
+            recordQueryTime(startTime); // Record the time taken to query the user
         }
     }
-    
-    
 
-    private List<Ticket> bookAvailableTickets(ClientSession session, 
-                                            ObjectId eventId, int quantity) {
-        long startTime = System.nanoTime();
-        List<Ticket> bookedTickets = ticketDAO.bookAvailableTickets(session, 
-                                                                   eventId, quantity);
-        recordQueryTime(startTime);
-        return bookedTickets;
-    }
-    
-    
-
-    private void validateBookedTickets(List<Ticket> bookedTickets, int quantity) {
-        if (bookedTickets.size() < quantity) {
-            throw new RuntimeException("Failed to book the desired number of tickets. " + 
-                "Requested: " + quantity + ", Booked: " + bookedTickets.size());
-        }
-    }
-    
-    
-
-    private BigDecimal calculateTotalPrice(Event event, List<Ticket> bookedTickets) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Ticket ticket : bookedTickets) {
-            BigDecimal price = getPriceForCategory(event, ticket.getTicketCategory());
-            total = total.add(price);
+    // Calculates the total price of the tickets based on their categories
+    private BigDecimal calculateTotalPrice(Event event, List<Ticket> tickets) {
+        BigDecimal total = BigDecimal.ZERO; // Initialize total price to zero
+        for (Ticket ticket : tickets) { // Loop through each ticket
+            BigDecimal price = getPriceForCategory(event, ticket.getTicketCategory()); // Get category price
+            total = total.add(price); // Accumulate the ticket prices
         }
         return total;
     }
-    
-    
 
-    private BigDecimal getPriceForCategory(Event event, String ticketCategory) {
+    // Retrieves the price of a ticket category for an event
+    private BigDecimal getPriceForCategory(Event event, String category) {
         return event.getTicketCategories().stream()
-                .filter(tc -> tc.getDescription().equalsIgnoreCase(ticketCategory))
-                .map(tc -> tc.getPrice())
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
+                .filter(tc -> tc.getDescription().equalsIgnoreCase(category)) // Find matching category
+                .map(tc -> tc.getPrice()) // Extract the price
+                .findFirst() // Return the first match
+                .orElse(BigDecimal.ZERO); // Default to zero if no match found
     }
-    
-    
 
-    private String getUserEmail(ObjectId userId) {
-        long startTime = System.nanoTime();
-        try {
-            User user = userDAO.findById(userId);
-            return user != null ? user.getEmail() : "unknown@example.com";
-        } finally {
-            recordQueryTime(startTime);
-        }
-    }
-    
-    
-
-    private Booking createBooking(ObjectId userId, ObjectId eventId, String userEmail,
-                                BigDecimal totalPrice, List<Ticket> bookedTickets) {
+    // Creates a booking object with the given details
+    private Booking createBooking(ObjectId userId, ObjectId eventId, String email,
+                                  BigDecimal totalPrice, List<Ticket> tickets) {
+        Date now = new Date(); // Current timestamp
         return new Booking(
-            userId,
-            eventId,
-            userEmail,
-            new Date(), // deliveryTime
-            new Date(), // timePaid
-            new Date(), // timeSent
-            totalPrice,
-            BigDecimal.ZERO, // discount
-            totalPrice, // finalPrice
-            "booked",
-            extractTicketIds(bookedTickets)
+                userId, eventId, email, now, now, now, // Timestamps for booking
+                totalPrice, BigDecimal.ZERO, totalPrice, // Pricing details
+                "confirmed", extractTicketIds(tickets) // Booking status and ticket IDs
         );
     }
-    
-    
 
-    private void persistBooking(Booking booking) {
-        long startTime = System.nanoTime();
-        try {
-            bookingDAO.create(booking);
-        } finally {
-            recordQueryTime(startTime);
-        }
-    }
-    
-    
-
+    // Extracts the IDs from a list of Ticket objects
     private List<ObjectId> extractTicketIds(List<Ticket> tickets) {
         List<ObjectId> ticketIds = new ArrayList<>();
-        for (Ticket ticket : tickets) {
-            ticketIds.add(ticket.getId());
+        for (Ticket ticket : tickets) { // Loop through each ticket
+            ticketIds.add(ticket.getId()); // Add ticket ID to the list
         }
-        return ticketIds;
+        return ticketIds; // Return the list of ticket IDs
     }
-    
-    
 
+    // Handles errors during a transaction and ensures proper rollback
     private void handleTransactionError(ClientSession session, ObjectId userId, Exception e) {
-        System.err.println("Error during booking: " + e.getMessage());
-        e.printStackTrace();
-        session.abortTransaction();
-        failedBookings.incrementAndGet();
-        System.out.println("Booking failed for user " + userId + 
-                         ". Total failed bookings: " + failedBookings.get());
+        System.err.println("Error during booking for user " + userId + ": " + e.getMessage());
+        if (session.hasActiveTransaction()) { // Check if transaction is still active
+            session.abortTransaction(); // Abort the transaction to roll back changes
+        }
+        failedBookings.incrementAndGet(); // Update failed bookings counter
     }
-    
-    
 
+    // Updates the performance metrics after a successful booking
     private void updateMetrics(int ticketsBooked) {
-        successfulBookings.incrementAndGet();
-        totalTicketsBooked.addAndGet(ticketsBooked);
+        successfulBookings.incrementAndGet(); // Increment successful bookings counter
+        totalTicketsBooked.addAndGet(ticketsBooked); // Increment total tickets booked counter
     }
-    
-    
 
+    // Records the time taken for a database query
     private void recordQueryTime(long startTime) {
         long endTime = System.nanoTime();
-        totalQueryTime += (endTime - startTime);
-        totalQueries++;
-    }
-    
-    
-
-    // Metrics retrieval methods
-    public int getSuccessfulBookings() {
-        return successfulBookings.get();
-    }
-    
-    
-
-    public int getFailedBookings() {
-        return failedBookings.get();
+        totalQueryTime += (endTime - startTime); // Accumulate query duration
+        totalQueries++; // Increment the number of queries executed
     }
 
-    
-    
-    public int getTotalTicketsBooked() {
-        return totalTicketsBooked.get();
-    }
-    
-    
-
-    public double getAverageQueryTime() {
-        return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0; // Convert to milliseconds
-    }
-    
-    
-
-    public int getTotalQueries() {
-        return totalQueries;
-    }
-
-    
-    
-    /**
-     * Validate current database state for consistency checking
-     */
-    public Map<String, Object> validateDatabaseState(ClientSession session, ObjectId eventId) {
-        Map<String, Object> state = new HashMap<>();
-        
-        try {
-            List<Ticket> availableTickets = ticketDAO.findAvailableTickets(eventId);
-            long totalBookings = bookingDAO.count();
-            Event event = eventDAO.findById(eventId);
-            
-            state.put("availableTickets", availableTickets);
-            state.put("totalBookings", totalBookings);
-            state.put("eventName", event != null ? event.getName() : "Unknown");
-            state.put("totalSuccessfulBookings", successfulBookings.get());
-            state.put("totalFailedBookings", failedBookings.get());
-            state.put("averageQueryTime", getAverageQueryTime());
-            state.put("totalQueries", totalQueries);
-            
-        } catch (Exception e) {
-            System.err.println("Error validating database state: " + e.getMessage());
-            state.put("error", e.getMessage());
-        }
-        
-        return state;
-    }
-    
-    
-    
-    /**
-     * Check if a specific booking exists and is valid
-     */
-    public boolean validateBooking(ObjectId bookingId) {
-        try {
-            Booking booking = bookingDAO.findById(bookingId);
-            if (booking == null) {
-                return false;
-            }
-            
-            // Verify all tickets in the booking
-            List<ObjectId> ticketIds = booking.getTickets();
-            for (ObjectId ticketId : ticketIds) {
-                Ticket ticket = ticketDAO.findById(ticketId);
-                if (ticket == null || !"booked".equals(ticket.getStatus())) {
-                    return false;
-                }
-            }
-            
-            return true;
-        } catch (Exception e) {
-            System.err.println("Error validating booking: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Get detailed metrics about bookings for analysis
-     */
+    // Retrieves detailed booking metrics
     public BookingMetrics getDetailedMetrics() {
         return new BookingMetrics(
-            successfulBookings.get(),
-            failedBookings.get(),
-            totalTicketsBooked.get(),
-            getAverageQueryTime(),
-            totalQueries
+                successfulBookings.get(), failedBookings.get(), totalTicketsBooked.get(),
+                getAverageQueryTime(), totalQueries
         );
     }
-    
+
+    // Calculates the average query time in milliseconds
+    public double getAverageQueryTime() {
+        return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0; // Convert nanoseconds to ms
+    }
+
     /**
-     * Inner class to hold detailed booking metrics
+     * Inner class for encapsulating booking metrics.
      */
     public static class BookingMetrics {
-        private final int successfulBookings;
-        private final int failedBookings;
-        private final int totalTicketsBooked;
-        private final double averageQueryTime;
-        private final int totalQueries;
+        private final int successfulBookings; // Number of successful bookings
+        private final int failedBookings; // Number of failed bookings
+        private final int totalTicketsBooked; // Total tickets booked
+        private final double averageQueryTime; // Average query time in milliseconds
+        private final int totalQueries; // Total number of queries executed
+
+        // Constructor for initializing metrics
+       
+
         
         public BookingMetrics(int successfulBookings, int failedBookings, 
                             int totalTicketsBooked, double averageQueryTime, 

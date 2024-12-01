@@ -1,3 +1,9 @@
+/**
+ * BookingService handles the core logic for creating bookings and managing tickets.
+ * This service interacts with a MySQL database via JPA to ensure transactional integrity
+ * and uses metrics to track performance and booking statistics.
+ */
+
 package com.poortoys.examples.simulation;
 
 import java.math.BigDecimal;
@@ -6,30 +12,31 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.persistence.*;
-
-import com.poortoys.examples.entities.Booking;
-import com.poortoys.examples.entities.BookingStatus;
-import com.poortoys.examples.entities.BookingTicket;
-import com.poortoys.examples.entities.Ticket;
-import com.poortoys.examples.entities.TicketStatus;
-import com.poortoys.examples.entities.User;
+import com.poortoys.examples.entities.*;
 
 public class BookingService {
-    // Essential fields
+    // EntityManager for database operations
     private final EntityManager em;
-    
-    // Metrics tracking
-    private final AtomicInteger successfulBookings = new AtomicInteger(0);
-    private final AtomicInteger failedBookings = new AtomicInteger(0);
-    private final AtomicInteger totalTicketsBooked = new AtomicInteger(0);
-    private long totalQueryTime = 0;
-    private int totalQueries = 0;
 
+    // Metrics for tracking performance and outcomes
+    private final AtomicInteger successfulBookings = new AtomicInteger(0); // Successful booking count
+    private final AtomicInteger failedBookings = new AtomicInteger(0); // Failed booking count
+    private final AtomicInteger totalTicketsBooked = new AtomicInteger(0); // Total tickets booked
+    private long totalQueryTime = 0; // Accumulated query time
+    private int totalQueries = 0; // Total queries executed
+
+    /**
+     * Constructor to initialize BookingService with an EntityManager.
+     * @param em EntityManager for JPA database operations
+     */
     public BookingService(EntityManager em) {
         this.em = em;
-        verifyDatabaseConnection();
+        verifyDatabaseConnection(); // Verify database connection on initialization
     }
 
+    /**
+     * Verifies database connectivity by executing a simple query.
+     */
     private void verifyDatabaseConnection() {
         try {
             em.createNativeQuery("SELECT 1").getSingleResult();
@@ -39,16 +46,21 @@ public class BookingService {
         }
     }
 
+    /**
+     * Retrieves the serial numbers of available tickets for a specific event.
+     * @param eventId ID of the event
+     * @return List of available ticket serial numbers
+     */
     public List<String> getAvailableTicketSerials(int eventId) {
         long startTime = System.nanoTime();
         try {
             return em.createQuery(
-                    "SELECT t.serialNumber FROM Ticket t " +
-                    "WHERE t.event.eventId = :eventId AND t.status = :status", 
-                    String.class)
-                    .setParameter("eventId", eventId)
-                    .setParameter("status", TicketStatus.AVAILABLE)
-                    .getResultList();
+                "SELECT t.serialNumber FROM Ticket t " +
+                "WHERE t.event.eventId = :eventId AND t.status = :status", 
+                String.class)
+                .setParameter("eventId", eventId)
+                .setParameter("status", TicketStatus.AVAILABLE)
+                .getResultList();
         } catch (Exception e) {
             System.err.println("Error getting available tickets: " + e.getMessage());
             return new ArrayList<>();
@@ -56,9 +68,14 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
-    
-    
 
+    /**
+     * Creates a booking for a user, locking tickets to ensure consistency.
+     * @param userId ID of the user making the booking
+     * @param ticketSerials List of ticket serial numbers to book
+     * @param email Email address for booking confirmation
+     * @return Booking object if successful, or throws an exception on failure
+     */
     public synchronized Booking createBooking(int userId, List<String> ticketSerials, String email) {
         EntityTransaction tx = em.getTransaction();
         long startTime = System.nanoTime();
@@ -67,27 +84,27 @@ public class BookingService {
         try {
             tx.begin();
 
-            // Find and validate user
+            // Step 1: Validate user existence
             User user = em.find(User.class, userId);
             if (user == null) {
                 throw new RuntimeException("User not found: " + userId);
             }
 
-            // Lock and validate tickets
+            // Step 2: Lock tickets and calculate total price
             List<Ticket> tickets = new ArrayList<>();
             BigDecimal totalPrice = BigDecimal.ZERO;
 
             for (String serial : ticketSerials) {
                 Ticket ticket = em.createQuery(
-                        "SELECT t FROM Ticket t " +
-                        "LEFT JOIN FETCH t.ticketCategory tc " +
-                        "WHERE t.serialNumber = :serial AND t.status = :status",
-                        Ticket.class)
-                        .setParameter("serial", serial)
-                        .setParameter("status", TicketStatus.AVAILABLE)
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                        .setHint("javax.persistence.lock.timeout", 5000)
-                        .getSingleResult();
+                    "SELECT t FROM Ticket t " +
+                    "LEFT JOIN FETCH t.ticketCategory tc " +
+                    "WHERE t.serialNumber = :serial AND t.status = :status",
+                    Ticket.class)
+                    .setParameter("serial", serial)
+                    .setParameter("status", TicketStatus.AVAILABLE)
+                    .setLockMode(LockModeType.PESSIMISTIC_WRITE) // Lock ticket for updates
+                    .setHint("javax.persistence.lock.timeout", 5000) // Lock timeout
+                    .getSingleResult();
 
                 if (ticket.getTicketCategory() == null) {
                     throw new RuntimeException("Ticket has no category: " + serial);
@@ -97,10 +114,10 @@ public class BookingService {
                 ticket.setStatus(TicketStatus.SOLD);
                 ticket.setPurchaseDate(new Date());
                 tickets.add(ticket);
-                em.merge(ticket);
+                em.merge(ticket); // Update ticket status in the database
             }
 
-            // Create booking
+            // Step 3: Create and persist the booking
             Booking booking = new Booking();
             booking.setUser(user);
             booking.setDeliveryAddressEmail(email);
@@ -112,7 +129,7 @@ public class BookingService {
 
             em.persist(booking);
 
-            // Create booking-ticket associations
+            // Step 4: Associate tickets with the booking
             for (Ticket ticket : tickets) {
                 BookingTicket bookingTicket = new BookingTicket();
                 bookingTicket.setBooking(booking);
@@ -120,15 +137,15 @@ public class BookingService {
                 em.persist(bookingTicket);
             }
 
-            em.flush();
-            tx.commit();
+            em.flush(); // Persist all changes
+            tx.commit(); // Commit the transaction
             
             successfulBookings.incrementAndGet();
             return booking;
 
         } catch (Exception e) {
             if (tx.isActive()) {
-                tx.rollback();
+                tx.rollback(); // Rollback transaction on failure
             }
             failedBookings.incrementAndGet();
             throw new RuntimeException("Booking failed: " + e.getMessage(), e);
@@ -136,17 +153,33 @@ public class BookingService {
             recordQueryTime(startTime);
         }
     }
-    
-    
 
-    // Helper method to record query time for metrics
+    /**
+     * Locks tickets for booking with pessimistic locking to ensure availability.
+     * @param serials List of ticket serial numbers
+     * @return List of locked Ticket objects
+     */
+    public List<Ticket> lockTickets(List<String> serials) {
+        return em.createQuery(
+            "SELECT t FROM Ticket t WHERE t.serialNumber IN :serials AND t.status = :status",
+            Ticket.class)
+            .setParameter("serials", serials)
+            .setParameter("status", TicketStatus.AVAILABLE)
+            .setLockMode(LockModeType.PESSIMISTIC_WRITE) // Apply pessimistic locking
+            .getResultList();
+    }
+
+    /**
+     * Records the time taken for queries to track performance metrics.
+     * @param startTime Start time of the query in nanoseconds
+     */
     private void recordQueryTime(long startTime) {
         long endTime = System.nanoTime();
         totalQueryTime += (endTime - startTime);
         totalQueries++;
     }
 
-    // Getter methods for metrics
+    // Getter methods for performance and booking metrics
     public int getSuccessfulBookings() {
         return successfulBookings.get();
     }
@@ -156,22 +189,10 @@ public class BookingService {
     }
 
     public double getAverageQueryTime() {
-        return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0;
+        return totalQueries > 0 ? (double) totalQueryTime / totalQueries / 1_000_000 : 0; // Convert to milliseconds
     }
 
     public int getTotalQueries() {
         return totalQueries;
     }
-    
-    public List<Ticket> lockTickets(List<String> serials) {
-        return em.createQuery(
-            "SELECT t FROM Ticket t WHERE t.serialNumber IN :serials AND t.status = :status",
-            Ticket.class)
-            .setParameter("serials", serials)
-            .setParameter("status", TicketStatus.AVAILABLE)
-            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-            .getResultList();
-    }
-    
-
 }
